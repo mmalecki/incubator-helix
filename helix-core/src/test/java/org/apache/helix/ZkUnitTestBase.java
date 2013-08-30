@@ -28,6 +28,8 @@ import org.I0Itec.zkclient.IZkStateListener;
 import org.I0Itec.zkclient.ZkConnection;
 import org.I0Itec.zkclient.ZkServer;
 import org.apache.helix.PropertyKey.Builder;
+import org.apache.helix.api.MessageId;
+import org.apache.helix.api.State;
 import org.apache.helix.controller.pipeline.Pipeline;
 import org.apache.helix.controller.pipeline.Stage;
 import org.apache.helix.controller.pipeline.StageContext;
@@ -344,11 +346,11 @@ public class ZkUnitTestBase {
     stage.postProcess();
   }
 
-  protected Message createMessage(MessageType type, String msgId, String fromState, String toState,
-      String resourceName, String tgtName) {
+  protected Message createMessage(MessageType type, MessageId msgId, String fromState,
+      String toState, String resourceName, String tgtName) {
     Message msg = new Message(type.toString(), msgId);
-    msg.setFromState(fromState);
-    msg.setToState(toState);
+    msg.setFromState(State.from(fromState));
+    msg.setToState(State.from(toState));
     msg.getRecord().setSimpleField(Attributes.RESOURCE_NAME.toString(), resourceName);
     msg.setTgtName(tgtName);
     return msg;

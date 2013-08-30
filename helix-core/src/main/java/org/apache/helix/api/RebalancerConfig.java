@@ -20,16 +20,17 @@ package org.apache.helix.api;
  */
 
 import org.apache.helix.model.IdealState.RebalanceMode;
+import org.apache.helix.model.ResourceAssignment;
 
 public class RebalancerConfig {
   private final RebalanceMode _rebalancerMode;
   private final RebalancerRef _rebalancerRef;
   private final StateModelDefId _stateModelDefId;
 
-  private final RscAssignment _resourceAssignment;
+  private final ResourceAssignment _resourceAssignment;
 
   public RebalancerConfig(RebalanceMode mode, RebalancerRef rebalancerRef,
-      StateModelDefId stateModelDefId, RscAssignment resourceAssignment) {
+      StateModelDefId stateModelDefId, ResourceAssignment resourceAssignment) {
     _rebalancerMode = mode;
     _rebalancerRef = rebalancerRef;
     _stateModelDefId = stateModelDefId;
@@ -64,7 +65,7 @@ public class RebalancerConfig {
    * Get the ideal node and state assignment of the resource
    * @return resource assignment
    */
-  public RscAssignment getResourceAssignment() {
+  public ResourceAssignment getResourceAssignment() {
     return _resourceAssignment;
   }
 
@@ -75,7 +76,7 @@ public class RebalancerConfig {
     private RebalanceMode _mode = RebalanceMode.NONE;
     private RebalancerRef _rebalancerRef;
     private StateModelDefId _stateModelDefId;
-    private RscAssignment _resourceAssignment;
+    private ResourceAssignment _resourceAssignment;
 
     /**
      * Set the rebalancer mode
@@ -111,7 +112,7 @@ public class RebalancerConfig {
      * @param resourceAssignment resource assignment
      * @return Builder
      */
-    public Builder resourceAssignment(RscAssignment resourceAssignment) {
+    public Builder resourceAssignment(ResourceAssignment resourceAssignment) {
       _resourceAssignment = resourceAssignment;
       return this;
     }

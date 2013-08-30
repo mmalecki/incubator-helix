@@ -22,6 +22,7 @@ package org.apache.helix.api;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.helix.model.ExternalView;
 import org.apache.helix.model.IdealState;
 import org.apache.helix.model.ResourceAssignment;
 
@@ -36,7 +37,7 @@ public class Resource {
 
   private final Set<Partition> _partitionSet;
 
-  private final ExtView _externalView;
+  private final ExternalView _externalView;
 
   // TODO move construct logic to ResourceAccessor
   /**
@@ -71,7 +72,7 @@ public class Resource {
    * @param externalView external view of the resource
    * @param rebalancerConfig configuration properties for rebalancing this resource
    */
-  public Resource(ResourceId id, Set<Partition> partitionSet, ExtView externalView,
+  public Resource(ResourceId id, Set<Partition> partitionSet, ExternalView externalView,
       RebalancerConfig rebalancerConfig) {
     _id = id;
     _partitionSet = ImmutableSet.copyOf(partitionSet);
@@ -91,7 +92,7 @@ public class Resource {
    * Get the external view of the resource
    * @return the external view of the resource
    */
-  public ExtView getExternalView() {
+  public ExternalView getExternalView() {
     return _externalView;
   }
 
@@ -109,7 +110,7 @@ public class Resource {
   public static class Builder {
     private final ResourceId _id;
     private final Set<Partition> _partitionSet;
-    private ExtView _externalView;
+    private ExternalView _externalView;
     private RebalancerConfig _rebalancerConfig;
 
     /**
@@ -136,7 +137,7 @@ public class Resource {
      * @param extView currently served replica placement and state
      * @return Builder
      */
-    public Builder externalView(ExtView extView) {
+    public Builder externalView(ExternalView extView) {
       _externalView = extView;
       return this;
     }

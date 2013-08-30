@@ -32,8 +32,10 @@ public abstract class Id implements Comparable<Id> {
 
   @Override
   public boolean equals(Object that) {
-    if (that instanceof ClusterId) {
+    if (that instanceof Id) {
       return this.stringify().equals(((Id) that).stringify());
+    } else if (that instanceof String) {
+      return this.stringify().equals((String) that);
     }
     return false;
   }
@@ -74,6 +76,16 @@ public abstract class Id implements Comparable<Id> {
     }
     return new PartitionId(PartitionId.extractResourceId(partitionId),
         PartitionId.stripResourceId(partitionId));
+  }
+
+  /**
+   * Get a concrete partition id
+   * @param resourceId resource identifier
+   * @param partitionSuffix partition identifier relative to a resource
+   * @return PartitionId
+   */
+  public static PartitionId partition(ResourceId resourceId, String partitionSuffix) {
+    return new PartitionId(resourceId, partitionSuffix);
   }
 
   /**

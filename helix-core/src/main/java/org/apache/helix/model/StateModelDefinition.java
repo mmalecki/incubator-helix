@@ -318,7 +318,7 @@ public class StateModelDefinition extends HelixProperty {
      * @return Builder
      */
     public Builder addTransition(String fromState, String toState, int priority) {
-      transitionMap.put(new Transition(fromState, toState), priority);
+      transitionMap.put(new Transition(State.from(fromState), State.from(toState)), priority);
       return this;
     }
 

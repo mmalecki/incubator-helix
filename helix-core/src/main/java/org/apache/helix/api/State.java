@@ -38,8 +38,15 @@ public class State {
   public boolean equals(Object that) {
     if (that instanceof State) {
       return this.toString().equals(((State) that).toString());
+    } else if (that instanceof String) {
+      return _state.equals((String) that);
     }
     return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return _state.hashCode();
   }
 
   /**

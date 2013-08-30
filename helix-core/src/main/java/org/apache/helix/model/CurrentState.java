@@ -117,26 +117,18 @@ public class CurrentState extends HelixProperty {
 
   /**
    * Get the session that this current state corresponds to
-   * @return String session identifier
-   */
-  public String getSessionIdString() {
-    return _record.getSimpleField(CurrentStateProperty.SESSION_ID.toString());
-  }
-
-  /**
-   * Get the session that this current state corresponds to
    * @return session identifier
    */
   public SessionId getSessionId() {
-    return Id.session(getSessionIdString());
+    return Id.session(_record.getSimpleField(CurrentStateProperty.SESSION_ID.toString()));
   }
 
   /**
    * Set the session that this current state corresponds to
-   * @param sessionId String session identifier
+   * @param sessionId session identifier
    */
-  public void setSessionId(String sessionId) {
-    _record.setSimpleField(CurrentStateProperty.SESSION_ID.toString(), sessionId);
+  public void setSessionId(SessionId sessionId) {
+    _record.setSimpleField(CurrentStateProperty.SESSION_ID.toString(), sessionId.stringify());
   }
 
   /**
@@ -179,6 +171,15 @@ public class CurrentState extends HelixProperty {
   }
 
   /**
+   * Set the state model that the resource follows
+   * @param stateModelName an identifier of the state model
+   */
+  public void setStateModelDefId(StateModelDefId stateModelId) {
+    _record.setSimpleField(CurrentStateProperty.STATE_MODEL_DEF.toString(),
+        stateModelId.stringify());
+  }
+
+  /**
    * Get the state model that the resource follows
    * @return an identifier of the state model
    */
@@ -191,12 +192,13 @@ public class CurrentState extends HelixProperty {
    * @param partitionName the name of the partition
    * @param state the state of the partition
    */
-  public void setState(String partitionName, String state) {
+  public void setState(PartitionId partitionId, State state) {
     Map<String, Map<String, String>> mapFields = _record.getMapFields();
-    if (mapFields.get(partitionName) == null) {
-      mapFields.put(partitionName, new TreeMap<String, String>());
+    if (mapFields.get(partitionId.stringify()) == null) {
+      mapFields.put(partitionId.stringify(), new TreeMap<String, String>());
     }
-    mapFields.get(partitionName).put(CurrentStateProperty.CURRENT_STATE.toString(), state);
+    mapFields.get(partitionId.stringify()).put(CurrentStateProperty.CURRENT_STATE.toString(),
+        state.toString());
   }
 
   /**
@@ -250,11 +252,37 @@ public class CurrentState extends HelixProperty {
       LOG.error("Current state does not contain state model ref. id:" + getResourceName());
       return false;
     }
-    if (getSessionIdString() == null) {
+    if (getSessionId() == null) {
       LOG.error("CurrentState does not contain session id, id : " + getResourceName());
       return false;
     }
     return true;
   }
 
+  /**
+   * Convert a string map to a concrete partition map
+   * @param rawMap map of partition name to state name
+   * @return map of partition id to state
+   */
+  public static Map<PartitionId, State> partitionStateMapFromStringMap(Map<String, String> rawMap) {
+    Map<PartitionId, State> partitionStateMap = new HashMap<PartitionId, State>();
+    for (String partitionId : rawMap.keySet()) {
+      partitionStateMap.put(Id.partition(partitionId), State.from(rawMap.get(partitionId)));
+    }
+    return partitionStateMap;
+  }
+
+  /**
+   * Convert a partition map to a string map
+   * @param partitionStateMap map of partition id to state
+   * @return map of partition name to state name
+   */
+  public static Map<String, String> stringMapFromPartitionStateMap(
+      Map<PartitionId, State> partitionStateMap) {
+    Map<String, String> rawMap = new HashMap<String, String>();
+    for (PartitionId partitionId : partitionStateMap.keySet()) {
+      rawMap.put(partitionId.stringify(), partitionStateMap.get(partitionId).toString());
+    }
+    return rawMap;
+  }
 }
