@@ -58,6 +58,14 @@ public class InstanceConfig extends HelixProperty {
   }
 
   /**
+   * Instantiate for a specific instance
+   * @param participantId the instance identifier
+   */
+  public InstanceConfig(ParticipantId participantId) {
+    super(participantId.stringify());
+  }
+
+  /**
    * Instantiate with a pre-populated record
    * @param record a ZNRecord corresponding to an instance configuration
    */

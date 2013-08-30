@@ -54,6 +54,18 @@ public abstract class Id implements Comparable<Id> {
   }
 
   /**
+   * Get a concrete cluster id for a string name
+   * @param clusterId string cluter identifier
+   * @return ClusterId
+   */
+  public static ClusterId cluster(String clusterId) {
+    if (clusterId == null) {
+      return null;
+    }
+    return new ClusterId(clusterId);
+  }
+
+  /**
    * Get a concrete resource id for a string name
    * @param resourceId string resource identifier
    * @return ResourceId

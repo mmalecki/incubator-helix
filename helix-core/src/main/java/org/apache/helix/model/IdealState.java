@@ -105,6 +105,14 @@ public class IdealState extends HelixProperty {
   }
 
   /**
+   * Instantiate an ideal state for a resource
+   * @param resourceId the id of the resource
+   */
+  public IdealState(ResourceId resourceId) {
+    super(resourceId.stringify());
+  }
+
+  /**
    * Instantiate an ideal state from a record
    * @param record ZNRecord corresponding to an ideal state
    */

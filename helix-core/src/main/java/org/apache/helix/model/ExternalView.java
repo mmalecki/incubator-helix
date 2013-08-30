@@ -48,6 +48,14 @@ public class ExternalView extends HelixProperty {
   }
 
   /**
+   * Instantiate an external view with the resource it corresponds to
+   * @param resource the id of the resource
+   */
+  public ExternalView(ResourceId resource) {
+    super(new ZNRecord(resource.stringify()));
+  }
+
+  /**
    * Instantiate an external view with a pre-populated record
    * @param record ZNRecord corresponding to an external view
    */

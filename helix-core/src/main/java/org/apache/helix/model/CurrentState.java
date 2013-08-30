@@ -60,6 +60,14 @@ public class CurrentState extends HelixProperty {
   }
 
   /**
+   * Instantiate a current state with a resource
+   * @param resourceId identifier for the resource
+   */
+  public CurrentState(ResourceId resourceId) {
+    super(resourceId.stringify());
+  }
+
+  /**
    * Instantiate a current state with a pre-populated ZNRecord
    * @param record a ZNRecord corresponding to the current state
    */

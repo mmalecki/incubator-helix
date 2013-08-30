@@ -53,6 +53,14 @@ public class LiveInstance extends HelixProperty {
   }
 
   /**
+   * Instantiate with an participant identifier
+   * @param id participant identifier
+   */
+  public LiveInstance(ParticipantId id) {
+    super(id.stringify());
+  }
+
+  /**
    * Instantiate with a pre-populated record
    * @param record ZNRecord corresponding to a live instance
    */
