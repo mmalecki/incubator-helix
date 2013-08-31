@@ -19,6 +19,7 @@ package org.apache.helix.model;
  * under the License.
  */
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
@@ -273,6 +274,9 @@ public class CurrentState extends HelixProperty {
    * @return map of partition id to state
    */
   public static Map<PartitionId, State> partitionStateMapFromStringMap(Map<String, String> rawMap) {
+    if (rawMap == null) {
+      return Collections.emptyMap();
+    }
     Map<PartitionId, State> partitionStateMap = new HashMap<PartitionId, State>();
     for (String partitionId : rawMap.keySet()) {
       partitionStateMap.put(Id.partition(partitionId), State.from(rawMap.get(partitionId)));
@@ -287,6 +291,9 @@ public class CurrentState extends HelixProperty {
    */
   public static Map<String, String> stringMapFromPartitionStateMap(
       Map<PartitionId, State> partitionStateMap) {
+    if (partitionStateMap == null) {
+      return Collections.emptyMap();
+    }
     Map<String, String> rawMap = new HashMap<String, String>();
     for (PartitionId partitionId : partitionStateMap.keySet()) {
       rawMap.put(partitionId.stringify(), partitionStateMap.get(partitionId).toString());

@@ -38,6 +38,7 @@ public class Resource {
   private final Set<Partition> _partitionSet;
 
   private final ExternalView _externalView;
+  private final ExternalView _pendingExternalView;
 
   // TODO move construct logic to ResourceAccessor
   /**
@@ -53,9 +54,8 @@ public class Resource {
     _rebalancerConfig = null;
 
     Set<Partition> partitionSet = new HashSet<Partition>();
-    for (String partitionId : idealState.getPartitionStringSet()) {
-      partitionSet
-          .add(new Partition(new PartitionId(id, PartitionId.stripResourceId(partitionId))));
+    for (PartitionId partitionId : idealState.getPartitionSet()) {
+      partitionSet.add(new Partition(partitionId));
     }
     _partitionSet = ImmutableSet.copyOf(partitionSet);
 
@@ -63,6 +63,7 @@ public class Resource {
     // _resourceAssignment = null;
 
     _externalView = null;
+    _pendingExternalView = null; // TODO: stub
   }
 
   /**
@@ -70,13 +71,15 @@ public class Resource {
    * @param id resource identifier
    * @param partitionSet disjoint partitions of the resource
    * @param externalView external view of the resource
+   * @param pendingExternalView pending external view based on unprocessed messages
    * @param rebalancerConfig configuration properties for rebalancing this resource
    */
   public Resource(ResourceId id, Set<Partition> partitionSet, ExternalView externalView,
-      RebalancerConfig rebalancerConfig) {
+      ExternalView pendingExternalView, RebalancerConfig rebalancerConfig) {
     _id = id;
     _partitionSet = ImmutableSet.copyOf(partitionSet);
     _externalView = externalView;
+    _pendingExternalView = pendingExternalView;
     _rebalancerConfig = rebalancerConfig;
   }
 
@@ -96,6 +99,14 @@ public class Resource {
     return _externalView;
   }
 
+  /**
+   * Get the pending external view of the resource based on unprocessed messages
+   * @return the external view of the resource
+   */
+  public ExternalView getPendingExternalView() {
+    return _pendingExternalView;
+  }
+
   public RebalancerConfig getRebalancerConfig() {
     return _rebalancerConfig;
   }
@@ -111,6 +122,7 @@ public class Resource {
     private final ResourceId _id;
     private final Set<Partition> _partitionSet;
     private ExternalView _externalView;
+    private ExternalView _pendingExternalView;
     private RebalancerConfig _rebalancerConfig;
 
     /**
@@ -143,6 +155,16 @@ public class Resource {
     }
 
     /**
+     * Set the pending external view of this resource
+     * @param extView replica placements as a result of pending messages
+     * @return Builder
+     */
+    public Builder pendingExternalView(ExternalView pendingExtView) {
+      _pendingExternalView = pendingExtView;
+      return this;
+    }
+
+    /**
      * Set the rebalancer configuration
      * @param rebalancerConfig properties of interest for rebalancing
      * @return Builder
@@ -157,7 +179,8 @@ public class Resource {
      * @return instantiated Resource
      */
     public Resource build() {
-      return new Resource(_id, _partitionSet, _externalView, _rebalancerConfig);
+      return new Resource(_id, _partitionSet, _externalView, _pendingExternalView,
+          _rebalancerConfig);
     }
   }
 }

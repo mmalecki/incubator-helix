@@ -121,6 +121,9 @@ public class ResourceAssignment extends HelixProperty {
    * @return map of participant id to state
    */
   public static Map<ParticipantId, State> replicaMapFromStringMap(Map<String, String> rawMap) {
+    if (rawMap == null) {
+      return Collections.emptyMap();
+    }
     Map<ParticipantId, State> replicaMap = new HashMap<ParticipantId, State>();
     for (String participantName : rawMap.keySet()) {
       replicaMap.put(Id.participant(participantName), State.from(rawMap.get(participantName)));
@@ -129,15 +132,54 @@ public class ResourceAssignment extends HelixProperty {
   }
 
   /**
+   * Convert a full replica mapping as strings into participant state maps
+   * @param rawMaps the map of partition name to participant name and state
+   * @return converted maps
+   */
+  public static Map<PartitionId, Map<ParticipantId, State>> replicaMapsFromStringMaps(
+      Map<String, Map<String, String>> rawMaps) {
+    if (rawMaps == null) {
+      return Collections.emptyMap();
+    }
+    Map<PartitionId, Map<ParticipantId, State>> participantStateMaps =
+        new HashMap<PartitionId, Map<ParticipantId, State>>();
+    for (String partitionId : rawMaps.keySet()) {
+      participantStateMaps.put(Id.partition(partitionId),
+          replicaMapFromStringMap(rawMaps.get(partitionId)));
+    }
+    return participantStateMaps;
+  }
+
+  /**
    * Helper for converting a replica map to a map of strings
    * @param replicaMap map of participant id to state
    * @return map of participant name to state name
    */
   public static Map<String, String> stringMapFromReplicaMap(Map<ParticipantId, State> replicaMap) {
+    if (replicaMap == null) {
+      return Collections.emptyMap();
+    }
     Map<String, String> rawMap = new HashMap<String, String>();
     for (ParticipantId participantId : replicaMap.keySet()) {
       rawMap.put(participantId.stringify(), replicaMap.get(participantId).toString());
     }
     return rawMap;
+  }
+
+  /**
+   * Convert a full state mapping into a mapping of string names
+   * @param replicaMaps the map of partition id to participant id and state
+   * @return converted maps
+   */
+  public static Map<String, Map<String, String>> stringMapsFromReplicaMaps(
+      Map<PartitionId, Map<ParticipantId, State>> replicaMaps) {
+    if (replicaMaps == null) {
+      return Collections.emptyMap();
+    }
+    Map<String, Map<String, String>> rawMaps = new HashMap<String, Map<String, String>>();
+    for (PartitionId partitionId : replicaMaps.keySet()) {
+      rawMaps.put(partitionId.stringify(), stringMapFromReplicaMap(replicaMaps.get(partitionId)));
+    }
+    return rawMaps;
   }
 }

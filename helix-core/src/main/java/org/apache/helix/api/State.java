@@ -1,5 +1,7 @@
 package org.apache.helix.api;
 
+import org.apache.helix.HelixDefinedState;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -59,5 +61,17 @@ public class State {
       return null;
     }
     return new State(state);
+  }
+
+  /**
+   * Get a State from a HelixDefinedState
+   * @param state HelixDefinedState
+   * @return State
+   */
+  public static State from(HelixDefinedState state) {
+    if (state == null) {
+      return null;
+    }
+    return new State(state.toString());
   }
 }
