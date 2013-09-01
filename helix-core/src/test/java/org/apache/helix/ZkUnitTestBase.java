@@ -304,14 +304,14 @@ public class ZkUnitTestBase {
 
   protected void setupLiveInstances(String clusterName, int[] liveInstances) {
     ZKHelixDataAccessor accessor =
-        new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor(_gZkClient));
+        new ZKHelixDataAccessor(clusterName, new ZkBaseDataAccessor<ZNRecord>(_gZkClient));
     Builder keyBuilder = accessor.keyBuilder();
 
     for (int i = 0; i < liveInstances.length; i++) {
       String instance = "localhost_" + liveInstances[i];
       LiveInstance liveInstance = new LiveInstance(instance);
       liveInstance.setSessionId("session_" + liveInstances[i]);
-      liveInstance.setHelixVersion("0.0.0");
+      liveInstance.setHelixVersion("0.4.0");
       accessor.setProperty(keyBuilder.liveInstance(instance), liveInstance);
     }
   }
