@@ -35,9 +35,13 @@ public class RebalancerConfig {
   private final int _replicaCount;
   private final String _participantGroupTag;
   private final int _maxPartitionsPerParticipant;
+  private final int _bucketSize;
+  private final boolean _batchMessageMode;
+  private final StateModelFactoryId _stateModelFactoryId;
 
   public RebalancerConfig(RebalanceMode mode, RebalancerRef rebalancerRef,
-      StateModelDefId stateModelDefId, ResourceAssignment resourceAssignment) {
+      StateModelDefId stateModelDefId, ResourceAssignment resourceAssignment, int bucketSize,
+      boolean batchMessageMode, StateModelFactoryId stateModelFactoryId) {
     _rebalancerMode = mode;
     _rebalancerRef = rebalancerRef;
     _stateModelDefId = stateModelDefId;
@@ -46,6 +50,9 @@ public class RebalancerConfig {
     _replicaCount = 0; // TODO: stub
     _participantGroupTag = null; // TODO: stub
     _maxPartitionsPerParticipant = Integer.MAX_VALUE; // TODO: stub
+    _bucketSize = bucketSize;
+    _batchMessageMode = batchMessageMode;
+    _stateModelFactoryId = stateModelFactoryId;
   }
 
   /**
@@ -114,6 +121,35 @@ public class RebalancerConfig {
   }
 
   /**
+   * Get bucket size
+   * @return bucket size
+   */
+  public int getBucketSize() {
+    return _bucketSize;
+  }
+
+  /**
+   * Get batch message mode
+   * @return true if in batch message mode, false otherwise
+   */
+  public boolean getBatchMessageMode() {
+    return _batchMessageMode;
+  }
+
+  /**
+   * Get state model factory id
+   * @return state model factory id
+   */
+  public StateModelFactoryId getStateModelFactoryId() {
+    return _stateModelFactoryId;
+  }
+
+  // TODO impl this
+  public String getRebalancerClassName() {
+    throw new UnsupportedOperationException("impl this");
+  }
+
+  /**
    * Assembles a RebalancerConfig
    */
   public static class Builder {
@@ -121,6 +157,9 @@ public class RebalancerConfig {
     private RebalancerRef _rebalancerRef;
     private StateModelDefId _stateModelDefId;
     private ResourceAssignment _resourceAssignment;
+    private int _bucketSize;
+    private boolean _batchMessageMode;
+    private StateModelFactoryId _stateModelFactoryId;
 
     /**
      * Set the rebalancer mode
@@ -162,11 +201,42 @@ public class RebalancerConfig {
     }
 
     /**
+     * Set bucket size
+     * @param bucketSize
+     * @return Builder
+     */
+    public Builder bucketSize(int bucketSize) {
+      _bucketSize = bucketSize;
+      return this;
+    }
+
+    /**
+     * Set batch message mode
+     * @param batchMessageMode
+     * @return Builder
+     */
+    public Builder batchMessageMode(boolean batchMessageMode) {
+      _batchMessageMode = batchMessageMode;
+      return this;
+    }
+
+    /**
+     * Set state model factory
+     * @param stateModelFactoryId
+     * @return Builder
+     */
+    public Builder stateModelFactoryId(StateModelFactoryId stateModelFactoryId) {
+      _stateModelFactoryId = stateModelFactoryId;
+      return this;
+    }
+
+    /**
      * Assemble a RebalancerConfig
      * @return a fully defined rebalancer configuration
      */
     public RebalancerConfig build() {
-      return new RebalancerConfig(_mode, _rebalancerRef, _stateModelDefId, _resourceAssignment);
+      return new RebalancerConfig(_mode, _rebalancerRef, _stateModelDefId, _resourceAssignment,
+          _bucketSize, _batchMessageMode, _stateModelFactoryId);
     }
   }
 }

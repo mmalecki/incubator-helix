@@ -321,7 +321,7 @@ public class ParticipantAccessor {
     }
 
     return new Participant(participantId, hostName, port, isEnabled, disabledPartitionIdSet, tags,
-        runningInstance, null, msgMap);
+        runningInstance, curStateMap, msgMap);
   }
 
   /**
