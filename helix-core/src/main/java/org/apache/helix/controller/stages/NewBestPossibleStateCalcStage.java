@@ -20,30 +20,26 @@ package org.apache.helix.controller.stages;
  */
 
 import java.util.Map;
+import java.util.Set;
 
-import org.apache.helix.HelixManager;
 import org.apache.helix.api.Cluster;
 import org.apache.helix.api.Id;
 import org.apache.helix.api.ParticipantId;
+import org.apache.helix.api.PartitionId;
 import org.apache.helix.api.RebalancerConfig;
 import org.apache.helix.api.Resource;
 import org.apache.helix.api.ResourceId;
-import org.apache.helix.api.State;
+import org.apache.helix.api.StateModelDefId;
 import org.apache.helix.controller.pipeline.AbstractBaseStage;
 import org.apache.helix.controller.pipeline.StageException;
-import org.apache.helix.controller.rebalancer.AutoRebalancer;
-import org.apache.helix.controller.rebalancer.CustomRebalancer;
 import org.apache.helix.controller.rebalancer.NewAutoRebalancer;
 import org.apache.helix.controller.rebalancer.NewCustomRebalancer;
 import org.apache.helix.controller.rebalancer.NewRebalancer;
 import org.apache.helix.controller.rebalancer.NewSemiAutoRebalancer;
-import org.apache.helix.controller.rebalancer.Rebalancer;
-import org.apache.helix.controller.rebalancer.SemiAutoRebalancer;
-import org.apache.helix.model.IdealState;
+import org.apache.helix.controller.rebalancer.util.NewConstraintBasedAssignment;
 import org.apache.helix.model.IdealState.RebalanceMode;
-import org.apache.helix.model.Partition;
 import org.apache.helix.model.ResourceAssignment;
-import org.apache.helix.util.HelixUtil;
+import org.apache.helix.model.StateModelDefinition;
 import org.apache.log4j.Logger;
 
 /**
@@ -51,13 +47,14 @@ import org.apache.log4j.Logger;
  * IdealState,StateModel,LiveInstance
  */
 public class NewBestPossibleStateCalcStage extends AbstractBaseStage {
-  private static final Logger LOG = Logger.getLogger(NewBestPossibleStateCalcStage.class
-      .getName());
+  private static final Logger LOG = Logger.getLogger(NewBestPossibleStateCalcStage.class.getName());
 
   @Override
   public void process(ClusterEvent event) throws Exception {
     long startTime = System.currentTimeMillis();
-    LOG.info("START BestPossibleStateCalcStage.process()");
+    if (LOG.isInfoEnabled()) {
+      LOG.info("START BestPossibleStateCalcStage.process()");
+    }
 
     NewCurrentStateOutput currentStateOutput =
         event.getAttribute(AttributeName.CURRENT_STATE.toString());
@@ -74,49 +71,70 @@ public class NewBestPossibleStateCalcStage extends AbstractBaseStage {
     event.addAttribute(AttributeName.BEST_POSSIBLE_STATE.toString(), bestPossibleStateOutput);
 
     long endTime = System.currentTimeMillis();
-    LOG.info("END BestPossibleStateCalcStage.process(). took: " + (endTime - startTime) + " ms");
+    if (LOG.isInfoEnabled()) {
+      LOG.info("END BestPossibleStateCalcStage.process(). took: " + (endTime - startTime) + " ms");
+    }
+  }
+
+  /**
+   * Fallback for cases when the resource has been dropped, but current state exists
+   * @param cluster cluster snapshot
+   * @param resourceId the resource for which to generate an assignment
+   * @param currentStateOutput full snapshot of the current state
+   * @param stateModelDef state model the resource follows
+   * @return assignment for the dropped resource
+   */
+  private ResourceAssignment mapDroppedResource(Cluster cluster, ResourceId resourceId,
+      NewCurrentStateOutput currentStateOutput, StateModelDefinition stateModelDef) {
+    ResourceAssignment partitionMapping = new ResourceAssignment(resourceId);
+    Set<PartitionId> mappedPartitions =
+        currentStateOutput.getCurrentStateMappedPartitions(resourceId);
+    if (mappedPartitions == null) {
+      return partitionMapping;
+    }
+    for (PartitionId partitionId : mappedPartitions) {
+      Set<ParticipantId> disabledParticipantsForPartition =
+          NewConstraintBasedAssignment.getDisabledParticipants(cluster.getParticipantMap(),
+              partitionId);
+      partitionMapping.addReplicaMap(partitionId, NewConstraintBasedAssignment
+          .computeAutoBestStateForPartition(cluster.getLiveParticipantMap(), stateModelDef, null,
+              currentStateOutput.getCurrentStateMap(resourceId, partitionId),
+              disabledParticipantsForPartition));
+    }
+    return partitionMapping;
   }
 
   // TODO check this
   private NewBestPossibleStateOutput compute(Cluster cluster, ClusterEvent event,
       Map<ResourceId, Resource> resourceMap, NewCurrentStateOutput currentStateOutput) {
-    // for each ideal state
-    // read the state model def
-    // for each resource
-    // get the preference list
-    // for each instanceName check if its alive then assign a state
-    // ClusterDataCache cache = event.getAttribute("ClusterDataCache");
-
     NewBestPossibleStateOutput output = new NewBestPossibleStateOutput();
+    Map<StateModelDefId, StateModelDefinition> stateModelDefs =
+        event.getAttribute(AttributeName.STATE_MODEL_DEFINITIONS.toString());
 
     for (ResourceId resourceId : resourceMap.keySet()) {
       LOG.debug("Processing resource:" + resourceId);
-
-      Resource resource = resourceMap.get(resourceId);
-      // Ideal state may be gone. In that case we need to get the state model name
+      // Resource may be gone. In that case we need to get the state model name
       // from the current state
-      // IdealState idealState = cache.getIdealState(resourceName);
-
       Resource existResource = cluster.getResource(resourceId);
       if (existResource == null) {
-        // if ideal state is deleted, use an empty one
-        LOG.info("resource:" + resourceId + " does not exist anymore");
-        // TODO
-        // existResource = new Resource();
+        // if resource is deleted, then we do not know which rebalancer to use
+        // instead, just mark all partitions of the resource as dropped
+        if (LOG.isInfoEnabled()) {
+          LOG.info("resource:" + resourceId + " does not exist anymore");
+        }
+        StateModelDefinition stateModelDef =
+            stateModelDefs.get(currentStateOutput.getResourceStateModelDef(resourceId));
+        ResourceAssignment droppedAssignment =
+            mapDroppedResource(cluster, resourceId, currentStateOutput, stateModelDef);
+        output.setResourceAssignment(resourceId, droppedAssignment);
+        continue;
       }
 
       RebalancerConfig rebalancerConfig = existResource.getRebalancerConfig();
       NewRebalancer rebalancer = null;
       if (rebalancerConfig.getRebalancerMode() == RebalanceMode.USER_DEFINED
-          && rebalancerConfig.getRebalancerClassName() != null) {
-        String rebalancerClassName = rebalancerConfig.getRebalancerClassName();
-        LOG.info("resource " + resourceId + " use idealStateRebalancer " + rebalancerClassName);
-        try {
-          rebalancer =
-              (NewRebalancer) (HelixUtil.loadClass(getClass(), rebalancerClassName).newInstance());
-        } catch (Exception e) {
-          LOG.warn("Exception while invoking custom rebalancer class:" + rebalancerClassName, e);
-        }
+          && rebalancerConfig.getRebalancerRef() != null) {
+        rebalancer = rebalancerConfig.getRebalancerRef().getRebalancer();
       }
       if (rebalancer == null) {
         if (rebalancerConfig.getRebalancerMode() == RebalanceMode.FULL_AUTO) {
@@ -128,9 +146,15 @@ public class NewBestPossibleStateCalcStage extends AbstractBaseStage {
         }
       }
 
-      // TODO pass state model definition
+      StateModelDefinition stateModelDef =
+          stateModelDefs.get(rebalancerConfig.getStateModelDefId());
       ResourceAssignment resourceAssignment =
-          rebalancer.computeResourceMapping(resource, cluster, null);
+          rebalancer.computeResourceMapping(existResource, cluster, stateModelDef,
+              currentStateOutput);
+      if (resourceAssignment == null) {
+        resourceAssignment =
+            mapDroppedResource(cluster, resourceId, currentStateOutput, stateModelDef);
+      }
 
       output.setResourceAssignment(resourceId, resourceAssignment);
     }

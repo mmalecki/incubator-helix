@@ -27,10 +27,14 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.helix.api.Cluster;
+import org.apache.helix.api.Participant;
+import org.apache.helix.api.ParticipantId;
+import org.apache.helix.api.PartitionId;
 import org.apache.helix.api.RebalancerConfig;
 import org.apache.helix.api.Resource;
 import org.apache.helix.api.ResourceId;
 import org.apache.helix.api.State;
+import org.apache.helix.api.StateModelDefId;
 import org.apache.helix.controller.pipeline.AbstractBaseStage;
 import org.apache.helix.controller.pipeline.StageException;
 import org.apache.helix.model.IdealState;
@@ -75,15 +79,22 @@ public class NewMessageSelectionStage extends AbstractBaseStage {
     public int getUpperBound() {
       return upper;
     }
+
+    @Override
+    public String toString() {
+      return String.format("%d-%d", lower, upper);
+    }
   }
 
   @Override
   public void process(ClusterEvent event) throws Exception {
     Cluster cluster = event.getAttribute("ClusterDataCache");
+    Map<StateModelDefId, StateModelDefinition> stateModelDefMap =
+        event.getAttribute(AttributeName.STATE_MODEL_DEFINITIONS.toString());
     Map<ResourceId, Resource> resourceMap = event.getAttribute(AttributeName.RESOURCES.toString());
     NewCurrentStateOutput currentStateOutput =
         event.getAttribute(AttributeName.CURRENT_STATE.toString());
-    MessageGenerationOutput messageGenOutput =
+    NewMessageOutput messageGenOutput =
         event.getAttribute(AttributeName.MESSAGES_ALL.toString());
     if (cluster == null || resourceMap == null || currentStateOutput == null
         || messageGenOutput == null) {
@@ -91,29 +102,28 @@ public class NewMessageSelectionStage extends AbstractBaseStage {
           + ". Requires DataCache|RESOURCES|CURRENT_STATE|MESSAGES_ALL");
     }
 
-    MessageSelectionStageOutput output = new MessageSelectionStageOutput();
+    NewMessageOutput output = new NewMessageOutput();
 
     for (ResourceId resourceId : resourceMap.keySet()) {
       Resource resource = resourceMap.get(resourceId);
-      // TODO fix it
-      StateModelDefinition stateModelDef = null;
-      // cache.getStateModelDef(resource.getStateModelDefRef());
+      StateModelDefinition stateModelDef =
+          stateModelDefMap.get(resource.getRebalancerConfig().getStateModelDefId());
 
+      // TODO have a logical model for transition
       Map<String, Integer> stateTransitionPriorities = getStateTransitionPriorityMap(stateModelDef);
-      // IdealState idealState = cache.getIdealState(resourceName);
-      Map<String, Bounds> stateConstraints =
+      Map<State, Bounds> stateConstraints =
           computeStateConstraints(stateModelDef, resource.getRebalancerConfig(), cluster);
 
       // TODO fix it
-      // for (Partition partition : resource.getPartitions()) {
-      // List<Message> messages = messageGenOutput.getMessages(resourceId.stringify(), partition);
-      // List<Message> selectedMessages =
-      // selectMessages(cache.getLiveInstances(),
-      // currentStateOutput.getCurrentStateMap(resourceName, partition),
-      // currentStateOutput.getPendingStateMap(resourceName, partition), messages,
-      // stateConstraints, stateTransitionPriorities, stateModelDef.getInitialStateString());
-      // output.addMessages(resourceId.stringify(), partition, selectedMessages);
-      // }
+      for (PartitionId partitionId : resource.getPartitionMap().keySet()) {
+        List<Message> messages = messageGenOutput.getMessages(resourceId, partitionId);
+        List<Message> selectedMessages =
+            selectMessages(cluster.getLiveParticipantMap(),
+            currentStateOutput.getCurrentStateMap(resourceId, partitionId),
+            currentStateOutput.getPendingStateMap(resourceId, partitionId), messages,
+                stateConstraints, stateTransitionPriorities, stateModelDef.getInitialState());
+        output.setMessages(resourceId, partitionId, selectedMessages);
+      }
     }
     event.addAttribute(AttributeName.MESSAGES_SELECTED.toString(), output);
   }
@@ -137,22 +147,22 @@ public class NewMessageSelectionStage extends AbstractBaseStage {
    *          : FROME_STATE-TO_STATE -> priority
    * @return: selected messages
    */
-  List<Message> selectMessages(Map<String, LiveInstance> liveInstances,
-      Map<String, String> currentStates, Map<String, String> pendingStates, List<Message> messages,
-      Map<String, Bounds> stateConstraints, final Map<String, Integer> stateTransitionPriorities,
-      String initialState) {
+  List<Message> selectMessages(Map<ParticipantId, Participant> liveParticipants,
+      Map<ParticipantId, State> currentStates, Map<ParticipantId, State> pendingStates,
+      List<Message> messages, Map<State, Bounds> stateConstraints,
+      final Map<String, Integer> stateTransitionPriorities, State initialState) {
     if (messages == null || messages.isEmpty()) {
       return Collections.emptyList();
     }
 
     List<Message> selectedMessages = new ArrayList<Message>();
-    Map<String, Bounds> bounds = new HashMap<String, Bounds>();
+    Map<State, Bounds> bounds = new HashMap<State, Bounds>();
 
     // count currentState, if no currentState, count as in initialState
-    for (String instance : liveInstances.keySet()) {
-      String state = initialState;
-      if (currentStates.containsKey(instance)) {
-        state = currentStates.get(instance);
+    for (ParticipantId liveParticipantId : liveParticipants.keySet()) {
+      State state = initialState;
+      if (currentStates.containsKey(liveParticipantId)) {
+        state = currentStates.get(liveParticipantId);
       }
 
       if (!bounds.containsKey(state)) {
@@ -163,8 +173,8 @@ public class NewMessageSelectionStage extends AbstractBaseStage {
     }
 
     // count pendingStates
-    for (String instance : pendingStates.keySet()) {
-      String state = pendingStates.get(instance);
+    for (ParticipantId participantId : pendingStates.keySet()) {
+      State state = pendingStates.get(participantId);
       if (!bounds.containsKey(state)) {
         bounds.put(state, new Bounds(0, 0));
       }
@@ -178,7 +188,7 @@ public class NewMessageSelectionStage extends AbstractBaseStage {
     for (Message message : messages) {
       State fromState = message.getFromState();
       State toState = message.getToState();
-      String transition = fromState + "-" + toState;
+      String transition = fromState.toString() + "-" + toState.toString();
       int priority = Integer.MAX_VALUE;
 
       if (stateTransitionPriorities.containsKey(transition)) {
@@ -203,7 +213,7 @@ public class NewMessageSelectionStage extends AbstractBaseStage {
         }
 
         if (!bounds.containsKey(toState)) {
-          bounds.put(toState.toString(), new Bounds(0, 0));
+          bounds.put(toState, new Bounds(0, 0));
         }
 
         // check lower bound of fromState
@@ -243,13 +253,13 @@ public class NewMessageSelectionStage extends AbstractBaseStage {
    * beginning and compute the stateConstraint instance once and re use at other places.
    * Each IdealState must have a constraint object associated with it
    */
-  private Map<String, Bounds> computeStateConstraints(StateModelDefinition stateModelDefinition,
+  private Map<State, Bounds> computeStateConstraints(StateModelDefinition stateModelDefinition,
       RebalancerConfig rebalancerConfig, Cluster cluster) {
-    Map<String, Bounds> stateConstraints = new HashMap<String, Bounds>();
+    Map<State, Bounds> stateConstraints = new HashMap<State, Bounds>();
 
-    List<String> statePriorityList = stateModelDefinition.getStatesPriorityStringList();
-    for (String state : statePriorityList) {
-      String numInstancesPerState = stateModelDefinition.getNumInstancesPerState(state);
+    List<State> statePriorityList = stateModelDefinition.getStatesPriorityList();
+    for (State state : statePriorityList) {
+      String numInstancesPerState = stateModelDefinition.getNumInstancesPerState(state.toString());
       int max = -1;
       if ("N".equals(numInstancesPerState)) {
         max = cluster.getLiveParticipantMap().size();

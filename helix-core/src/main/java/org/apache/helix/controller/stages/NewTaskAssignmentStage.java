@@ -31,8 +31,10 @@ import org.apache.helix.HelixManagerProperties;
 import org.apache.helix.PropertyKey;
 import org.apache.helix.PropertyKey.Builder;
 import org.apache.helix.api.Cluster;
+import org.apache.helix.api.Id;
 import org.apache.helix.api.Participant;
 import org.apache.helix.api.ParticipantId;
+import org.apache.helix.api.PartitionId;
 import org.apache.helix.api.Resource;
 import org.apache.helix.api.ResourceId;
 import org.apache.helix.controller.pipeline.AbstractBaseStage;
@@ -52,7 +54,7 @@ public class NewTaskAssignmentStage extends AbstractBaseStage {
 
     HelixManager manager = event.getAttribute("helixmanager");
     Map<ResourceId, Resource> resourceMap = event.getAttribute(AttributeName.RESOURCES.toString());
-    MessageThrottleStageOutput messageOutput =
+    NewMessageOutput messageOutput =
         event.getAttribute(AttributeName.MESSAGES_THROTTLE.toString());
     Cluster cluster = event.getAttribute("ClusterDataCache");
     Map<ParticipantId, Participant> liveParticipantMap = cluster.getLiveParticipantMap();
@@ -67,11 +69,10 @@ public class NewTaskAssignmentStage extends AbstractBaseStage {
     List<Message> messagesToSend = new ArrayList<Message>();
     for (ResourceId resourceId : resourceMap.keySet()) {
       Resource resource = resourceMap.get(resourceId);
-      // TODO fix it
-      // for (Partition partition : resource.getPartitions()) {
-      // List<Message> messages = messageOutput.getMessages(resourceName, partition);
-      // messagesToSend.addAll(messages);
-      // }
+      for (PartitionId partitionId : resource.getPartitionMap().keySet()) {
+        List<Message> messages = messageOutput.getMessages(resourceId, partitionId);
+        messagesToSend.addAll(messages);
+      }
     }
 
     List<Message> outputMessages =
@@ -95,9 +96,9 @@ public class NewTaskAssignmentStage extends AbstractBaseStage {
     while (iter.hasNext()) {
       Message message = iter.next();
       ResourceId resourceId = message.getResourceId();
-      Resource resource = resourceMap.get(resourceId.stringify());
+      Resource resource = resourceMap.get(resourceId);
 
-      String participantId = message.getTgtName();
+      ParticipantId participantId = Id.participant(message.getTgtName());
       Participant liveParticipant = liveParticipantMap.get(participantId);
       String participantVersion = null;
       if (liveParticipant != null) {
@@ -141,10 +142,10 @@ public class NewTaskAssignmentStage extends AbstractBaseStage {
           + " transit " + message.getPartitionId() + "|" + message.getPartitionIds() + " from:"
           + message.getFromState() + " to:" + message.getToState());
 
-      // System.out.println("[dbg] Sending Message " + message.getMsgId() + " to " +
-      // message.getTgtName()
-      // + " transit " + message.getPartitionName() + "|" + message.getPartitionNames()
-      // + " from: " + message.getFromState() + " to: " + message.getToState());
+      // System.out.println("[dbg] Sending Message " + message.getMsgId() + " to "
+      // + message.getTgtName() + " transit " + message.getPartitionId() + "|"
+      // + message.getPartitionId() + " from: " + message.getFromState() + " to: "
+      // + message.getToState());
 
       keys.add(keyBuilder.message(message.getTgtName(), message.getId()));
     }

@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.apache.helix.model.ExternalView;
 import org.apache.helix.model.IdealState;
+import org.apache.helix.model.Message;
 import org.apache.helix.model.ResourceAssignment;
 
 import com.google.common.collect.ImmutableMap;
@@ -37,11 +38,11 @@ import com.google.common.collect.ImmutableSet;
 public class Resource {
   private final ResourceId _id;
   private final RebalancerConfig _rebalancerConfig;
+  private final SchedulerTaskConfig _schedulerTaskConfig;
 
   private final Map<PartitionId, Partition> _partitionMap;
 
   private final ExternalView _externalView;
-  private final ExternalView _pendingExternalView;
 
   /**
    * Construct a resource
@@ -50,19 +51,37 @@ public class Resource {
    */
   public Resource(ResourceId id, IdealState idealState, ResourceAssignment resourceAssignment) {
     _id = id;
-    _rebalancerConfig = new RebalancerConfig(idealState.getRebalanceMode(), idealState.getRebalancerRef(),
-            idealState.getStateModelDefId(), resourceAssignment, idealState.getBucketSize(),
-            idealState.getBatchMessageMode(), Id.stateModelFactory(
-                idealState.getStateModelFactoryName()));
+    _rebalancerConfig = new RebalancerConfig(idealState, resourceAssignment);
 
     Map<PartitionId, Partition> partitionMap = new HashMap<PartitionId, Partition>();
+    Map<PartitionId, Map<String, String>> schedulerTaskConfig =
+        new HashMap<PartitionId, Map<String, String>>();
+    Map<String, Integer> transitionTimeoutMap = new HashMap<String, Integer>();
     for (PartitionId partitionId : idealState.getPartitionSet()) {
       partitionMap.put(partitionId, new Partition(partitionId));
+
+      // TODO refactor it
+      Map<String, String> taskConfigMap = idealState.getRecord().getMapField(partitionId.stringify());
+      if (taskConfigMap != null) {
+        schedulerTaskConfig.put(partitionId, taskConfigMap);
+      }
+
+      // TODO refactor it
+      for (String simpleKey : idealState.getRecord().getSimpleFields().keySet()) {
+        if (simpleKey.indexOf("_" + Message.Attributes.TIMEOUT) != -1) {
+          try {
+            int timeout = Integer.parseInt(idealState.getRecord().getSimpleField(simpleKey));
+            transitionTimeoutMap.put(simpleKey, timeout);
+          } catch (Exception e) {
+            // ignore
+          }
+        }
+      }
     }
     _partitionMap = ImmutableMap.copyOf(partitionMap);
+    _schedulerTaskConfig = new SchedulerTaskConfig(transitionTimeoutMap, schedulerTaskConfig);
 
     _externalView = null;
-    _pendingExternalView = null; // TODO: stub
   }
 
   /**
@@ -75,12 +94,12 @@ public class Resource {
    */
   public Resource(ResourceId id, Map<PartitionId, Partition> partitionMap,
       ExternalView externalView,
-      ExternalView pendingExternalView, RebalancerConfig rebalancerConfig) {
+      RebalancerConfig rebalancerConfig, SchedulerTaskConfig schedulerTaskConfig) {
     _id = id;
     _partitionMap = ImmutableMap.copyOf(partitionMap);
     _externalView = externalView;
-    _pendingExternalView = pendingExternalView;
     _rebalancerConfig = rebalancerConfig;
+    _schedulerTaskConfig = schedulerTaskConfig;
   }
 
   /**
@@ -116,20 +135,16 @@ public class Resource {
     return _externalView;
   }
 
-  /**
-   * Get the pending external view of the resource based on unprocessed messages
-   * @return the external view of the resource
-   */
-  public ExternalView getPendingExternalView() {
-    return _pendingExternalView;
-  }
-
   public RebalancerConfig getRebalancerConfig() {
     return _rebalancerConfig;
   }
 
   public ResourceId getId() {
     return _id;
+  }
+
+  public SchedulerTaskConfig getSchedulerTaskConfig() {
+    return _schedulerTaskConfig;
   }
 
   /**
@@ -139,8 +154,8 @@ public class Resource {
     private final ResourceId _id;
     private final Map<PartitionId, Partition> _partitionMap;
     private ExternalView _externalView;
-    private ExternalView _pendingExternalView;
     private RebalancerConfig _rebalancerConfig;
+    private SchedulerTaskConfig _schedulerTaskConfig;
 
     /**
      * Build a Resource with an id
@@ -184,16 +199,6 @@ public class Resource {
     }
 
     /**
-     * Set the pending external view of this resource
-     * @param extView replica placements as a result of pending messages
-     * @return Builder
-     */
-    public Builder pendingExternalView(ExternalView pendingExtView) {
-      _pendingExternalView = pendingExtView;
-      return this;
-    }
-
-    /**
      * Set the rebalancer configuration
      * @param rebalancerConfig properties of interest for rebalancing
      * @return Builder
@@ -204,12 +209,21 @@ public class Resource {
     }
 
     /**
+     * @param schedulerTaskConfig
+     * @return
+     */
+    public Builder schedulerTaskConfig(SchedulerTaskConfig schedulerTaskConfig) {
+      _schedulerTaskConfig = schedulerTaskConfig;
+      return this;
+    }
+
+    /**
      * Create a Resource object
      * @return instantiated Resource
      */
     public Resource build() {
-      return new Resource(_id, _partitionMap, _externalView, _pendingExternalView,
-          _rebalancerConfig);
+      return new Resource(_id, _partitionMap, _externalView, _rebalancerConfig,
+          _schedulerTaskConfig);
     }
   }
 }

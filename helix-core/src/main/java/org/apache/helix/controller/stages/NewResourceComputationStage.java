@@ -21,7 +21,6 @@ package org.apache.helix.controller.stages;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.helix.api.Cluster;
 import org.apache.helix.api.Participant;
@@ -67,7 +66,7 @@ public class NewResourceComputationStage extends AbstractBaseStage {
 
     // include all partitions from CurrentState as well since idealState might be removed
     for (Participant liveParticipant : cluster.getLiveParticipantMap().values()) {
-      for ( ResourceId resourceId : liveParticipant.getCurrentStateMap().keySet()) {
+      for (ResourceId resourceId : liveParticipant.getCurrentStateMap().keySet()) {
         CurrentState currentState = liveParticipant.getCurrentStateMap().get(resourceId);
 
         if (currentState.getStateModelDefRef() == null) {
@@ -80,13 +79,15 @@ public class NewResourceComputationStage extends AbstractBaseStage {
 
         // don't overwrite ideal state configs
         if (!resourceBuilderMap.containsKey(resourceId)) {
-          RebalancerConfig.Builder rebalancerConfigBuilder = new RebalancerConfig.Builder();
+          RebalancerConfig.Builder rebalancerConfigBuilder =
+              new RebalancerConfig.Builder(resourceId);
           rebalancerConfigBuilder.stateModelDef(currentState.getStateModelDefId());
-          rebalancerConfigBuilder.stateModelFactoryId(new StateModelFactoryId(currentState.getStateModelFactoryName()));
+          rebalancerConfigBuilder.stateModelFactoryId(new StateModelFactoryId(currentState
+              .getStateModelFactoryName()));
           rebalancerConfigBuilder.bucketSize(currentState.getBucketSize());
           rebalancerConfigBuilder.batchMessageMode(currentState.getBatchMessageMode());
 
-          org.apache.helix.api.Resource.Builder resourceBuilder = new org.apache.helix.api.Resource.Builder(resourceId);
+          Resource.Builder resourceBuilder = new Resource.Builder(resourceId);
           resourceBuilder.rebalancerConfig(rebalancerConfigBuilder.build());
           resourceBuilderMap.put(resourceId, resourceBuilder);
         }

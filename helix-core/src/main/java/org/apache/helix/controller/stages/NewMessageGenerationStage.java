@@ -32,6 +32,7 @@ import org.apache.helix.api.MessageId;
 import org.apache.helix.api.ParticipantId;
 import org.apache.helix.api.Partition;
 import org.apache.helix.api.PartitionId;
+import org.apache.helix.api.RebalancerConfig;
 import org.apache.helix.api.Resource;
 import org.apache.helix.api.ResourceId;
 import org.apache.helix.api.SessionId;
@@ -44,6 +45,7 @@ import org.apache.helix.manager.zk.DefaultSchedulerMessageHandlerFactory;
 import org.apache.helix.model.IdealState;
 import org.apache.helix.model.LiveInstance;
 import org.apache.helix.model.Message;
+import org.apache.helix.model.ResourceAssignment;
 import org.apache.helix.model.Message.MessageState;
 import org.apache.helix.model.Message.MessageType;
 import org.apache.helix.model.StateModelDefinition;
@@ -52,17 +54,19 @@ import org.apache.log4j.Logger;
 /**
  * Compares the currentState, pendingState with IdealState and generate messages
  */
-public class NewMessageGenerationPhase extends AbstractBaseStage {
-  private static Logger LOG = Logger.getLogger(NewMessageGenerationPhase.class);
+public class NewMessageGenerationStage extends AbstractBaseStage {
+  private static Logger LOG = Logger.getLogger(NewMessageGenerationStage.class);
 
   @Override
   public void process(ClusterEvent event) throws Exception {
     HelixManager manager = event.getAttribute("helixmanager");
     Cluster cluster = event.getAttribute("ClusterDataCache");
+    Map<StateModelDefId, StateModelDefinition> stateModelDefMap =
+        event.getAttribute(AttributeName.STATE_MODEL_DEFINITIONS.toString());
     Map<ResourceId, Resource> resourceMap = event.getAttribute(AttributeName.RESOURCES.toString());
     NewCurrentStateOutput currentStateOutput =
         event.getAttribute(AttributeName.CURRENT_STATE.toString());
-    BestPossibleStateOutput bestPossibleStateOutput =
+    NewBestPossibleStateOutput bestPossibleStateOutput =
         event.getAttribute(AttributeName.BEST_POSSIBLE_STATE.toString());
     if (manager == null || cluster == null || resourceMap == null || currentStateOutput == null
         || bestPossibleStateOutput == null) {
@@ -70,26 +74,19 @@ public class NewMessageGenerationPhase extends AbstractBaseStage {
           + ". Requires HelixManager|DataCache|RESOURCES|CURRENT_STATE|BEST_POSSIBLE_STATE");
     }
 
-    // Map<String, LiveInstance> liveInstances = cache.getLiveInstances();
-    // Map<String, String> sessionIdMap = new HashMap<String, String>();
-
-    // for (LiveInstance liveInstance : liveInstances.values()) {
-    // sessionIdMap.put(liveInstance.getInstanceName(), liveInstance.getSessionId().stringify());
-    // }
-    MessageGenerationOutput output = new MessageGenerationOutput();
+    NewMessageOutput output = new NewMessageOutput();
 
     for (ResourceId resourceId : resourceMap.keySet()) {
       Resource resource = resourceMap.get(resourceId);
       int bucketSize = resource.getRebalancerConfig().getBucketSize();
 
-      // TODO fix it
-      StateModelDefinition stateModelDef = null;
-      // cache.getStateModelDef(resource.getStateModelDefRef());
+      StateModelDefinition stateModelDef =
+          stateModelDefMap.get(resource.getRebalancerConfig().getStateModelDefId());
 
+      ResourceAssignment resourceAssignment =
+          bestPossibleStateOutput.getResourceAssignment(resourceId);
       for (PartitionId partitionId : resource.getPartitionMap().keySet()) {
-        // TODO fix it
-        Map<ParticipantId, State> instanceStateMap = null;
-        // bestPossibleStateOutput.getInstanceStateMap(resourceId, partition);
+        Map<ParticipantId, State> instanceStateMap = resourceAssignment.getReplicaMap(partitionId);
 
         // we should generate message based on the desired-state priority
         // so keep generated messages in a temp map keyed by state
@@ -102,8 +99,7 @@ public class NewMessageGenerationPhase extends AbstractBaseStage {
           State currentState =
               currentStateOutput.getCurrentState(resourceId, partitionId, participantId);
           if (currentState == null) {
-            // TODO fix it
-            // currentState = stateModelDef.getInitialStateString();
+            currentState = stateModelDef.getInitialState();
           }
 
           if (desiredState.equals(currentState)) {
@@ -114,12 +110,11 @@ public class NewMessageGenerationPhase extends AbstractBaseStage {
               currentStateOutput.getPendingState(resourceId, partitionId, participantId);
 
           // TODO fix it
-          State nextState = new State("");
-          // stateModelDef.getNextStateForTransition(currentState, desiredState);
+          State nextState = stateModelDef.getNextStateForTransition(currentState, desiredState);
           if (nextState == null) {
             LOG.error("Unable to find a next state for partition: " + partitionId
-                + " from stateModelDefinition"
-                + stateModelDef.getClass() + " from:" + currentState + " to:" + desiredState);
+                + " from stateModelDefinition" + stateModelDef.getClass() + " from:" + currentState
+                + " to:" + desiredState);
             continue;
           }
 
@@ -129,12 +124,11 @@ public class NewMessageGenerationPhase extends AbstractBaseStage {
                   + partitionId + " from " + currentState + " to " + nextState);
             } else if (currentState.equals(pendingState)) {
               LOG.info("Message hasn't been removed for " + participantId + " to transit"
-                  + partitionId + " to " + pendingState + ", desiredState: "
-                  + desiredState);
+                  + partitionId + " to " + pendingState + ", desiredState: " + desiredState);
             } else {
               LOG.info("IdealState changed before state transition completes for " + partitionId
-                  + " on " + participantId + ", pendingState: "
-                  + pendingState + ", currentState: " + currentState + ", nextState: " + nextState);
+                  + " on " + participantId + ", pendingState: " + pendingState + ", currentState: "
+                  + currentState + ", nextState: " + nextState);
             }
           } else {
             // TODO check if instance is alive
@@ -144,46 +138,31 @@ public class NewMessageGenerationPhase extends AbstractBaseStage {
             Message message =
                 createMessage(manager, resourceId, partitionId, participantId, currentState,
                     nextState, sessionId, new StateModelDefId(stateModelDef.getId()), resource
-                        .getRebalancerConfig()
-                        .getStateModelFactoryId(), bucketSize);
+                        .getRebalancerConfig().getStateModelFactoryId(), bucketSize);
 
-            // TODO fix this
-            // IdealState idealState = cache.getIdealState(resourceName);
-            // if (idealState != null
-            // && idealState.getStateModelDefRef().equalsIgnoreCase(
-            // DefaultSchedulerMessageHandlerFactory.SCHEDULER_TASK_QUEUE)) {
-            // if (idealState.getRecord().getMapField(partition.getPartitionName()) != null) {
-            // message.getRecord().setMapField(Message.Attributes.INNER_MESSAGE.toString(),
-            // idealState.getRecord().getMapField(partition.getPartitionName()));
-            // }
-            // }
+            // TODO refactor set timeout logic, it's really messy
+            RebalancerConfig rebalancerConfig = resource.getRebalancerConfig();
+            if (rebalancerConfig != null
+                && rebalancerConfig.getStateModelDefId().stringify()
+                    .equalsIgnoreCase(DefaultSchedulerMessageHandlerFactory.SCHEDULER_TASK_QUEUE)) {
+              if (resource.getPartitionSet().size() > 0) {
+                // TODO refactor it
+                message.getRecord().setMapField(Message.Attributes.INNER_MESSAGE.toString(),
+                    resource.getSchedulerTaskConfig().getTaskConfig(partitionId));
+              }
+            }
+
             // Set timeout of needed
-            // String stateTransition =
-            // currentState + "-" + nextState + "_" + Message.Attributes.TIMEOUT;
-            // if (idealState != null) {
-            // String timeOutStr = idealState.getRecord().getSimpleField(stateTransition);
-            // if (timeOutStr == null
-            // && idealState.getStateModelDefRef().equalsIgnoreCase(
-            // DefaultSchedulerMessageHandlerFactory.SCHEDULER_TASK_QUEUE)) {
-            // // scheduled task queue
-            // if (idealState.getRecord().getMapField(partition.getPartitionName()) != null) {
-            // timeOutStr =
-            // idealState.getRecord().getMapField(partition.getPartitionName())
-            // .get(Message.Attributes.TIMEOUT.toString());
-            // }
-            // }
-            // if (timeOutStr != null) {
-            // try {
-            // int timeout = Integer.parseInt(timeOutStr);
-            // if (timeout > 0) {
-            // message.setExecutionTimeout(timeout);
-            // }
-            // } catch (Exception e) {
-            // logger.error("", e);
-            // }
-            // }
-            // }
-            // message.getRecord().setSimpleField("ClusterEventName", event.getName());
+            String stateTransition =
+                currentState + "-" + nextState + "_" + Message.Attributes.TIMEOUT;
+            if (resource.getSchedulerTaskConfig() != null) {
+              Integer timeout =
+                  resource.getSchedulerTaskConfig().getTimeout(stateTransition, partitionId);
+              if (timeout != null && timeout > 0) {
+                message.setExecutionTimeout(timeout);
+              }
+            }
+            message.getRecord().setSimpleField("ClusterEventName", event.getName());
 
             if (!messageMap.containsKey(desiredState)) {
               messageMap.put(desiredState, new ArrayList<Message>());
@@ -193,12 +172,11 @@ public class NewMessageGenerationPhase extends AbstractBaseStage {
         }
 
         // add generated messages to output according to state priority
-        List<String> statesPriorityList = stateModelDef.getStatesPriorityStringList();
-        for (String state : statesPriorityList) {
+        List<State> statesPriorityList = stateModelDef.getStatesPriorityList();
+        for (State state : statesPriorityList) {
           if (messageMap.containsKey(state)) {
             for (Message message : messageMap.get(state)) {
-              // TODO fix it
-              // output.addMessage(resourceId, partitionId, message);
+              output.addMessage(resourceId, partitionId, message);
             }
           }
         }
@@ -206,28 +184,28 @@ public class NewMessageGenerationPhase extends AbstractBaseStage {
       } // end of for-each-partition
     }
     event.addAttribute(AttributeName.MESSAGES_ALL.toString(), output);
+    // System.out.println("output: " + output);
   }
 
   private Message createMessage(HelixManager manager, ResourceId resourceId,
       PartitionId partitionId, ParticipantId participantId, State currentState, State nextState,
-      SessionId sessionId, StateModelDefId stateModelDefId,
+      SessionId participantSessionId, StateModelDefId stateModelDefId,
       StateModelFactoryId stateModelFactoryId, int bucketSize) {
-  // MessageId uuid = Id.message(UUID.randomUUID().toString());
-  // Message message = new Message(MessageType.STATE_TRANSITION, uuid);
-  // message.setSrcName(manager.getInstanceName());
-  // message.setTgtName(instanceName);
-  // message.setMsgState(MessageState.NEW);
-  // message.setPartitionId(Id.partition(partitionName));
-  // message.setResourceId(Id.resource(resourceName));
-  // message.setFromState(State.from(currentState));
-  // message.setToState(State.from(nextState));
-  // message.setTgtSessionId(Id.session(sessionId));
-  // message.setSrcSessionId(Id.session(manager.getSessionId()));
-  // message.setStateModelDef(Id.stateModelDef(stateModelDefName));
-  // message.setStateModelFactoryName(stateModelFactoryName);
-  // message.setBucketSize(bucketSize);
-  //
-  // return message;
-    return null;
+    MessageId uuid = Id.message(UUID.randomUUID().toString());
+    Message message = new Message(MessageType.STATE_TRANSITION, uuid);
+    message.setSrcName(manager.getInstanceName());
+    message.setTgtName(participantId.stringify());
+    message.setMsgState(MessageState.NEW);
+    message.setPartitionId(partitionId);
+    message.setResourceId(resourceId);
+    message.setFromState(currentState);
+    message.setToState(nextState);
+    message.setTgtSessionId(participantSessionId);
+    message.setSrcSessionId(Id.session(manager.getSessionId()));
+    message.setStateModelDef(stateModelDefId);
+    message.setStateModelFactoryName(stateModelFactoryId.stringify());
+    message.setBucketSize(bucketSize);
+
+    return message;
   }
 }

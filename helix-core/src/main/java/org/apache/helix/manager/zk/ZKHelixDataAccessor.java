@@ -410,6 +410,7 @@ public class ZKHelixDataAccessor implements HelixDataAccessor, ControllerChangeL
       switch (type) {
       case EXTERNALVIEW:
         if (value.getBucketSize() == 0) {
+          System.out.println("set: " + value.getRecord());
           records.add(value.getRecord());
         } else {
           _baseDataAccessor.remove(path, options);

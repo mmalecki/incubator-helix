@@ -22,6 +22,7 @@ package org.apache.helix.controller.stages;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.helix.api.ParticipantId;
 import org.apache.helix.api.PartitionId;
@@ -29,7 +30,6 @@ import org.apache.helix.api.ResourceId;
 import org.apache.helix.api.State;
 import org.apache.helix.api.StateModelDefId;
 import org.apache.helix.model.CurrentState;
-import org.apache.helix.model.Partition;
 
 public class NewCurrentStateOutput {
   /**
@@ -135,7 +135,7 @@ public class NewCurrentStateOutput {
    * @return state
    */
   static State getState(Map<ResourceId, Map<PartitionId, Map<ParticipantId, State>>> stateMap,
-    ResourceId resourceId, PartitionId partitionId, ParticipantId participantId) {
+      ResourceId resourceId, PartitionId partitionId, ParticipantId participantId) {
     Map<PartitionId, Map<ParticipantId, State>> map = stateMap.get(resourceId);
     if (map != null) {
       Map<ParticipantId, State> instanceStateMap = map.get(partitionId);
@@ -221,12 +221,25 @@ public class NewCurrentStateOutput {
   }
 
   /**
+   * Get the partitions mapped in the current state
+   * @param resourceId resource to look up
+   * @return set of mapped partitions, or empty set if there are none
+   */
+  public Set<PartitionId> getCurrentStateMappedPartitions(ResourceId resourceId) {
+    Map<PartitionId, Map<ParticipantId, State>> currentStateMap = _currentStateMap.get(resourceId);
+    if (currentStateMap != null) {
+      return currentStateMap.keySet();
+    }
+    return Collections.emptySet();
+  }
+
+  /**
    * @param resourceId
    * @param partitionId
    * @return
    */
   public Map<ParticipantId, State> getPendingStateMap(ResourceId resourceId, PartitionId partitionId) {
-    return getStateMap(_currentStateMap, resourceId, partitionId);
+    return getStateMap(_pendingStateMap, resourceId, partitionId);
 
   }
 

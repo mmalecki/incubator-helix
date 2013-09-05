@@ -27,6 +27,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.helix.api.Cluster;
+import org.apache.helix.api.Participant;
+import org.apache.helix.api.ParticipantId;
+import org.apache.helix.api.PartitionId;
 import org.apache.helix.api.Resource;
 import org.apache.helix.api.ResourceId;
 import org.apache.helix.controller.pipeline.AbstractBaseStage;
@@ -115,7 +118,7 @@ public class NewMessageThrottleStage extends AbstractBaseStage {
   @Override
   public void process(ClusterEvent event) throws Exception {
     Cluster cluster = event.getAttribute("ClusterDataCache");
-    MessageSelectionStageOutput msgSelectionOutput =
+    NewMessageOutput msgSelectionOutput =
         event.getAttribute(AttributeName.MESSAGES_SELECTED.toString());
     Map<ResourceId, Resource> resourceMap = event.getAttribute(AttributeName.RESOURCES.toString());
 
@@ -124,34 +127,33 @@ public class NewMessageThrottleStage extends AbstractBaseStage {
           + ". Requires ClusterDataCache|RESOURCES|MESSAGES_SELECTED");
     }
 
-    MessageThrottleStageOutput output = new MessageThrottleStageOutput();
+    NewMessageOutput output = new NewMessageOutput();
 
     // TODO fix it
-    ClusterConstraints constraint = null;
-    // cache.getConstraint(ConstraintType.MESSAGE_CONSTRAINT);
+    ClusterConstraints constraint = cluster.getConstraint(ConstraintType.MESSAGE_CONSTRAINT);
     Map<String, Integer> throttleCounterMap = new HashMap<String, Integer>();
 
-    // TODO fix it
-    // if (constraint != null) {
-    // // go through all pending messages, they should be counted but not throttled
-    // for (String instance : cache.getLiveInstances().keySet()) {
-    // throttle(throttleCounterMap, constraint, new ArrayList<Message>(cache.getMessages(instance)
-    // .values()), false);
-    // }
-    // }
+    if (constraint != null) {
+      // go through all pending messages, they should be counted but not throttled
+      for (ParticipantId participantId : cluster.getLiveParticipantMap().keySet()) {
+        Participant liveParticipant = cluster.getLiveParticipantMap().get(participantId);
+        throttle(throttleCounterMap, constraint, new ArrayList<Message>(liveParticipant
+            .getMessageMap().values()), false);
+      }
+    }
 
     // go through all new messages, throttle if necessary
     // assume messages should be sorted by state transition priority in messageSelection stage
     for (ResourceId resourceId : resourceMap.keySet()) {
       Resource resource = resourceMap.get(resourceId);
       // TODO fix it
-      // for (Partition partition : resource.getPartitions()) {
-      // List<Message> messages = msgSelectionOutput.getMessages(resourceName, partition);
-      // if (constraint != null && messages != null && messages.size() > 0) {
-      // messages = throttle(throttleCounterMap, constraint, messages, true);
-      // }
-      // output.addMessages(resourceName, partition, messages);
-      // }
+      for (PartitionId partitionId : resource.getPartitionMap().keySet()) {
+        List<Message> messages = msgSelectionOutput.getMessages(resourceId, partitionId);
+        if (constraint != null && messages != null && messages.size() > 0) {
+          messages = throttle(throttleCounterMap, constraint, messages, true);
+        }
+        output.setMessages(resourceId, partitionId, messages);
+      }
     }
 
     event.addAttribute(AttributeName.MESSAGES_THROTTLE.toString(), output);

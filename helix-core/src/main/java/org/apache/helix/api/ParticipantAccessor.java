@@ -307,9 +307,11 @@ public class ParticipantAccessor {
     }
 
     Map<MessageId, Message> msgMap = new HashMap<MessageId, Message>();
-    for (String msgId : instanceMsgMap.keySet()) {
-      Message message = instanceMsgMap.get(msgId);
-      msgMap.put(new MessageId(msgId), message);
+    if (instanceMsgMap != null) {
+      for (String msgId : instanceMsgMap.keySet()) {
+        Message message = instanceMsgMap.get(msgId);
+        msgMap.put(new MessageId(msgId), message);
+      }
     }
 
     Map<ResourceId, CurrentState> curStateMap = new HashMap<ResourceId, CurrentState>();
