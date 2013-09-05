@@ -398,6 +398,8 @@ public class ZKHelixDataAccessor implements HelixDataAccessor, ControllerChangeL
     List<List<ZNRecord>> bucketizedRecords =
         new ArrayList<List<ZNRecord>>(Collections.<List<ZNRecord>> nCopies(keys.size(), null));
 
+    // debug
+    boolean dbg = false;
     for (int i = 0; i < keys.size(); i++) {
       PropertyKey key = keys.get(i);
       PropertyType type = key.getType();
@@ -410,7 +412,7 @@ public class ZKHelixDataAccessor implements HelixDataAccessor, ControllerChangeL
       switch (type) {
       case EXTERNALVIEW:
         if (value.getBucketSize() == 0) {
-          System.out.println("set: " + value.getRecord());
+          dbg = true;
           records.add(value.getRecord());
         } else {
           _baseDataAccessor.remove(path, options);
@@ -440,6 +442,10 @@ public class ZKHelixDataAccessor implements HelixDataAccessor, ControllerChangeL
 
     // set non-bucketized nodes or parent nodes of bucketized nodes
     boolean success[] = _baseDataAccessor.setChildren(paths, records, options);
+    if (dbg) {
+      System.out.println("set. paths: " + paths + ", records: " + records);
+    }
+
 
     // set bucketized nodes
     List<String> allBucketizedPaths = new ArrayList<String>();
@@ -454,7 +460,6 @@ public class ZKHelixDataAccessor implements HelixDataAccessor, ControllerChangeL
 
     // TODO: set success accordingly
     _baseDataAccessor.setChildren(allBucketizedPaths, allBucketizedRecords, options);
-
     return success;
   }
 
