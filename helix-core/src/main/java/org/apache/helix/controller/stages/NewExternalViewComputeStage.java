@@ -36,6 +36,7 @@ import org.apache.helix.ZNRecord;
 import org.apache.helix.ZNRecordDelta;
 import org.apache.helix.ZNRecordDelta.MergeOperation;
 import org.apache.helix.api.Cluster;
+import org.apache.helix.api.Id;
 import org.apache.helix.api.ParticipantId;
 import org.apache.helix.api.PartitionId;
 import org.apache.helix.api.RebalancerConfig;
@@ -95,7 +96,6 @@ public class NewExternalViewComputeStage extends AbstractBaseStage {
       } else {
         view.setBucketSize(currentStateOutput.getBucketSize(resourceId));
       }
-      System.out.println("cs-output: " + currentStateOutput);
       for (PartitionId partitionId : resource.getPartitionMap().keySet()) {
         Map<ParticipantId, State> currentStateMap =
             currentStateOutput.getCurrentStateMap(resourceId, partitionId);
@@ -151,13 +151,12 @@ public class NewExternalViewComputeStage extends AbstractBaseStage {
 
     // add/update external-views
     if (newExtViews.size() > 0) {
-      System.out.println("write-ev. ev: " + newExtViews.get(0));
       dataAccessor.setChildren(keys, newExtViews);
     }
 
     // remove dead external-views
     for (String resourceName : curExtViews.keySet()) {
-      if (!resourceMap.keySet().contains(resourceName)) {
+      if (!resourceMap.containsKey(Id.resource(resourceName))) {
         dataAccessor.removeProperty(keyBuilder.externalView(resourceName));
       }
     }
