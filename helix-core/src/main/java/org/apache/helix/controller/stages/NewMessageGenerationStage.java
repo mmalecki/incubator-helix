@@ -179,6 +179,8 @@ public class NewMessageGenerationStage extends AbstractBaseStage {
           if (messageMap.containsKey(state)) {
             for (Message message : messageMap.get(state)) {
               output.addMessage(resourceId, partitionId, message);
+              System.err.println(state);
+              System.err.println(message);
             }
           }
         }
