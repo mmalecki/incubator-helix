@@ -103,8 +103,7 @@ public class NewTaskAssignmentStage extends AbstractBaseStage {
         participantVersion = liveParticipant.getRunningInstance().getVersion().toString();
       }
 
-      if (resource == null || !resource.getRebalancerConfig().getBatchMessageMode()
-          || participantVersion == null
+      if (resource == null || !resource.getBatchMessageMode() || participantVersion == null
           || !properties.isFeatureSupported("batch_message", participantVersion)) {
         outputMessages.add(message);
         continue;
@@ -140,10 +139,10 @@ public class NewTaskAssignmentStage extends AbstractBaseStage {
           + " transit " + message.getPartitionId() + "|" + message.getPartitionIds() + " from:"
           + message.getFromState() + " to:" + message.getToState());
 
-      // System.out.println("[dbg] Sending Message " + message.getMsgId() + " to "
-      // + message.getTgtName() + " transit " + message.getPartitionId() + "|"
-      // + message.getPartitionId() + " from: " + message.getFromState() + " to: "
-      // + message.getToState());
+      System.out.println("[dbg] Sending Message " + message.getMsgId() + " to "
+          + message.getTgtName() + " transit " + message.getPartitionId() + "|"
+          + message.getPartitionId() + " from: " + message.getFromState() + " to: "
+          + message.getToState());
 
       keys.add(keyBuilder.message(message.getTgtName(), message.getId()));
     }
