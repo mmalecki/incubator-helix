@@ -67,6 +67,7 @@ public class NewResourceComputationStage extends AbstractBaseStage {
       resourceBuilder.addPartitions(partitionSet);
       resourceBuilder.bucketSize(resource.getBucketSize());
       resourceBuilder.batchMessageMode(resource.getBatchMessageMode());
+      resourceBuilder.schedulerTaskConfig(resource.getSchedulerTaskConfig());
       resourceBuilderMap.put(resourceId, resourceBuilder);
     }
 
