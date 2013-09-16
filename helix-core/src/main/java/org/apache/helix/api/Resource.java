@@ -131,9 +131,6 @@ public class Resource {
    * @return scheduler-task config or null if state-model-def is not SchedulerTaskQueue
    */
   SchedulerTaskConfig schedulerTaskConfig(IdealState idealState) {
-    if (!idealState.getStateModelDefId().equalsIgnoreCase(StateModelDefId.SchedulerTaskQueue)) {
-      return null;
-    }
 
     // TODO refactor get timeout
     Map<String, Integer> transitionTimeoutMap = new HashMap<String, Integer>();
@@ -150,17 +147,21 @@ public class Resource {
     }
 
     Map<PartitionId, Message> innerMsgMap = new HashMap<PartitionId, Message>();
-    for (PartitionId partitionId : idealState.getPartitionSet()) {
-      // TODO refactor: scheduler-task-queue state model uses map-field to store inner-messages
-      // this is different from all other state-models
-      Map<String, String> innerMsgStrMap =
-          idealState.getRecord().getMapField(partitionId.stringify());
-      if (innerMsgStrMap != null) {
-        Message innerMsg = Message.toMessage(innerMsgStrMap);
-        innerMsgMap.put(partitionId, innerMsg);
+    if (idealState.getStateModelDefId().equalsIgnoreCase(StateModelDefId.SchedulerTaskQueue)) {
+      for (PartitionId partitionId : idealState.getPartitionSet()) {
+        // TODO refactor: scheduler-task-queue state model uses map-field to store inner-messages
+        // this is different from all other state-models
+        Map<String, String> innerMsgStrMap =
+            idealState.getRecord().getMapField(partitionId.stringify());
+        if (innerMsgStrMap != null) {
+          Message innerMsg = Message.toMessage(innerMsgStrMap);
+          innerMsgMap.put(partitionId, innerMsg);
+        }
       }
     }
 
+    // System.out.println("transitionTimeoutMap: " + transitionTimeoutMap);
+    // System.out.println("innerMsgMap: " + innerMsgMap);
     return new SchedulerTaskConfig(transitionTimeoutMap, innerMsgMap);
   }
 
