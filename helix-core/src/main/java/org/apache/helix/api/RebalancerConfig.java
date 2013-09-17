@@ -360,6 +360,7 @@ public class RebalancerConfig extends NamespacedConfig {
     private boolean _anyLiveParticipant;
     private int _replicaCount;
     private int _maxPartitionsPerParticipant;
+    private String _participantGroupTag;
 
     /**
      * Configure the rebalancer for a resource
@@ -424,6 +425,16 @@ public class RebalancerConfig extends NamespacedConfig {
     }
 
     /**
+     * Set participant group tag
+     * @param tag
+     * @return Builder
+     */
+    public T participantGroupTag(String tag) {
+      _participantGroupTag = tag;
+      return self();
+    }
+
+    /**
      * Add a partition that the resource serves
      * @param partition fully-qualified partition
      * @return Builder
@@ -468,6 +479,9 @@ public class RebalancerConfig extends NamespacedConfig {
       rebalancerConfig.setMaxPartitionsPerParticipant(_maxPartitionsPerParticipant);
       if (_stateModelFactoryId != null) {
         rebalancerConfig.setStateModelFactoryId(_stateModelFactoryId);
+      }
+      if (_participantGroupTag != null) {
+        rebalancerConfig.setParticipantGroupTag(_participantGroupTag);
       }
     }
 

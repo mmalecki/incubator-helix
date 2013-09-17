@@ -84,14 +84,16 @@ public class Resource {
               .anyLiveParticipant(anyLiveParticipant).replicaCount(replicaCount)
               .maxPartitionsPerParticipant(idealState.getMaxPartitionsPerInstance())
               .stateModelDef(idealState.getStateModelDefId())
-              .stateModelFactoryId(idealState.getStateModelFactoryId()).build();
+              .stateModelFactoryId(idealState.getStateModelFactoryId())
+              .participantGroupTag(idealState.getInstanceGroupTag()).build();
     } else if (idealState.getRebalanceMode() == RebalanceMode.SEMI_AUTO) {
       SemiAutoRebalancerConfig semiAutoConfig =
           new SemiAutoRebalancerConfig.Builder(id).addPartitions(partitionMap.values())
               .anyLiveParticipant(anyLiveParticipant).replicaCount(replicaCount)
               .maxPartitionsPerParticipant(idealState.getMaxPartitionsPerInstance())
               .stateModelDef(idealState.getStateModelDefId())
-              .stateModelFactoryId(idealState.getStateModelFactoryId()).build();
+              .stateModelFactoryId(idealState.getStateModelFactoryId())
+              .participantGroupTag(idealState.getInstanceGroupTag()).build();
       for (PartitionId partitionId : partitionMap.keySet()) {
         semiAutoConfig.setPreferenceList(partitionId, idealState.getPreferenceList(partitionId));
       }
@@ -102,7 +104,8 @@ public class Resource {
               .anyLiveParticipant(anyLiveParticipant).replicaCount(replicaCount)
               .maxPartitionsPerParticipant(idealState.getMaxPartitionsPerInstance())
               .stateModelDef(idealState.getStateModelDefId())
-              .stateModelFactoryId(idealState.getStateModelFactoryId()).build();
+              .stateModelFactoryId(idealState.getStateModelFactoryId())
+              .participantGroupTag(idealState.getInstanceGroupTag()).build();
       for (PartitionId partitionId : partitionMap.keySet()) {
         customConfig.setPreferenceMap(partitionId, idealState.getParticipantStateMap(partitionId));
       }
@@ -114,7 +117,8 @@ public class Resource {
               .maxPartitionsPerParticipant(idealState.getMaxPartitionsPerInstance())
               .stateModelDef(idealState.getStateModelDefId())
               .stateModelFactoryId(idealState.getStateModelFactoryId())
-              .rebalancerRef(idealState.getRebalancerRef()).build();
+              .rebalancerRef(idealState.getRebalancerRef())
+              .participantGroupTag(idealState.getInstanceGroupTag()).build();
     }
 
     SchedulerTaskConfig schedulerTaskConfig = schedulerTaskConfig(idealState);
