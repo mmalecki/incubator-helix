@@ -39,6 +39,7 @@ import org.apache.helix.api.config.ParticipantConfig;
 import org.apache.helix.api.config.ResourceConfig;
 import org.apache.helix.api.config.UserConfig;
 import org.apache.helix.api.id.ClusterId;
+import org.apache.helix.api.id.ConstraintId;
 import org.apache.helix.api.id.ControllerId;
 import org.apache.helix.api.id.ParticipantId;
 import org.apache.helix.api.id.PartitionId;
@@ -351,6 +352,31 @@ public class ClusterAccessor {
   }
 
   /**
+   * Get cluster constraints of a given type
+   * @param type ConstraintType value
+   * @return ClusterConstraints, or null if none present
+   */
+  public ClusterConstraints readConstraints(ConstraintType type) {
+    return _accessor.getProperty(_keyBuilder.constraint(type.toString()));
+  }
+
+  /**
+   * Remove a constraint from the cluster
+   * @param type the constraint type
+   * @param constraintId the constraint id
+   * @return true if removed, false otherwise
+   */
+  public boolean removeConstraint(ConstraintType type, ConstraintId constraintId) {
+    ClusterConstraints constraints = _accessor.getProperty(_keyBuilder.constraint(type.toString()));
+    if (constraints == null || constraints.getConstraintItem(constraintId) == null) {
+      LOG.error("Constraint with id " + constraintId + " not present");
+      return false;
+    }
+    constraints.removeConstraintItem(constraintId);
+    return _accessor.setProperty(_keyBuilder.constraint(type.toString()), constraints);
+  }
+
+  /**
    * Read the user config of the cluster
    * @return UserConfig, or null
    */
@@ -600,24 +626,8 @@ public class ClusterAccessor {
    * @return true if participant dropped, false if there was an error
    */
   public boolean dropParticipantFromCluster(ParticipantId participantId) {
-    if (_accessor.getProperty(_keyBuilder.instanceConfig(participantId.stringify())) == null) {
-      LOG.error("Config for participant: " + participantId + " does NOT exist in cluster: "
-          + _clusterId);
-      return false;
-    }
-
-    if (_accessor.getProperty(_keyBuilder.instance(participantId.stringify())) == null) {
-      LOG.error("Participant: " + participantId + " structure does NOT exist in cluster: "
-          + _clusterId);
-      return false;
-    }
-
-    // delete participant config path
-    _accessor.removeProperty(_keyBuilder.instanceConfig(participantId.stringify()));
-
-    // delete participant path
-    _accessor.removeProperty(_keyBuilder.instance(participantId.stringify()));
-    return true;
+    ParticipantAccessor accessor = new ParticipantAccessor(_accessor);
+    return accessor.dropParticipant(participantId);
   }
 
   /**
