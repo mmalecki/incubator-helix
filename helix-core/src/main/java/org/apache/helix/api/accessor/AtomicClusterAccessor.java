@@ -1,19 +1,5 @@
 package org.apache.helix.api.accessor;
 
-import org.apache.helix.HelixDataAccessor;
-import org.apache.helix.PropertyKey;
-import org.apache.helix.api.Cluster;
-import org.apache.helix.api.Scope;
-import org.apache.helix.api.config.ClusterConfig;
-import org.apache.helix.api.config.ParticipantConfig;
-import org.apache.helix.api.config.ResourceConfig;
-import org.apache.helix.api.id.ClusterId;
-import org.apache.helix.api.id.ParticipantId;
-import org.apache.helix.api.id.ResourceId;
-import org.apache.helix.lock.HelixLock;
-import org.apache.helix.lock.HelixLockable;
-import org.apache.log4j.Logger;
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -33,6 +19,27 @@ import org.apache.log4j.Logger;
  * under the License.
  */
 
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.helix.HelixDataAccessor;
+import org.apache.helix.PropertyKey;
+import org.apache.helix.api.Cluster;
+import org.apache.helix.api.Resource;
+import org.apache.helix.api.Scope;
+import org.apache.helix.api.config.ClusterConfig;
+import org.apache.helix.api.config.ParticipantConfig;
+import org.apache.helix.api.config.ResourceConfig;
+import org.apache.helix.api.id.ClusterId;
+import org.apache.helix.api.id.ParticipantId;
+import org.apache.helix.api.id.ResourceId;
+import org.apache.helix.lock.HelixLock;
+import org.apache.helix.lock.HelixLockable;
+import org.apache.log4j.Logger;
+
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
 /**
  * An atomic version of the ClusterAccessor. If atomic operations are required, use instances of
  * this class. Atomicity is not guaranteed when using instances of ClusterAccessor alongside
@@ -43,9 +50,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
   private static final Logger LOG = Logger.getLogger(AtomicClusterAccessor.class);
 
   private final HelixLockable _lockProvider;
-  @SuppressWarnings("unused")
   private final HelixDataAccessor _accessor;
-  @SuppressWarnings("unused")
   private final PropertyKey.Builder _keyBuilder;
   private final ClusterId _clusterId;
 
@@ -182,12 +187,36 @@ public class AtomicClusterAccessor extends ClusterAccessor {
           return null;
         }
         ClusterConfig config = clusterDelta.mergeInto(cluster.getConfig());
-        boolean status = setBasicClusterConfig(config);
+        boolean status = super.setBasicClusterConfig(config);
         return status ? config : null;
       } finally {
         lock.unlock();
       }
     }
     return null;
+  }
+
+  /**
+   * Read resources atomically. This is resource-atomic, not cluster-atomic
+   */
+  @Override
+  public Map<ResourceId, Resource> readResources() {
+    // read resources individually instead of together to maintain the equality link between ideal
+    // state and resource config
+    Map<ResourceId, Resource> resources = Maps.newHashMap();
+    Set<String> idealStateNames =
+        Sets.newHashSet(_accessor.getChildNames(_keyBuilder.idealStates()));
+    Set<String> resourceConfigNames =
+        Sets.newHashSet(_accessor.getChildNames(_keyBuilder.resourceConfigs()));
+    resourceConfigNames.addAll(idealStateNames);
+    ResourceAccessor accessor = new AtomicResourceAccessor(_clusterId, _accessor, _lockProvider);
+    for (String resourceName : resourceConfigNames) {
+      ResourceId resourceId = ResourceId.from(resourceName);
+      Resource resource = accessor.readResource(resourceId);
+      if (resource != null) {
+        resources.put(resourceId, resource);
+      }
+    }
+    return resources;
   }
 }

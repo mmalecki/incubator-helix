@@ -81,6 +81,11 @@ public class ClusterAccessor {
   private final PropertyKey.Builder _keyBuilder;
   private final ClusterId _clusterId;
 
+  /**
+   * Instantiate a cluster accessor
+   * @param clusterId the cluster to access
+   * @param accessor HelixDataAccessor for the physical store
+   */
   public ClusterAccessor(ClusterId clusterId, HelixDataAccessor accessor) {
     _accessor = accessor;
     _keyBuilder = accessor.keyBuilder();
@@ -281,7 +286,7 @@ public class ClusterAccessor {
   }
 
   /**
-   * Read all resource in the cluster
+   * Read all resources in the cluster
    * @return map of resource id to resource
    */
   public Map<ResourceId, Resource> readResources() {

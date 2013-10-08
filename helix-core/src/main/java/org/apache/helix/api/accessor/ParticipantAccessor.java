@@ -205,9 +205,6 @@ public class ParticipantAccessor {
       }
     }
 
-    // TODO merge list logic should go to znrecord updater
-    // update participantConfig
-    // could not use ZNRecordUpdater since it doesn't do listField merge/subtract
     BaseDataAccessor<ZNRecord> baseAccessor = _accessor.getBaseDataAccessor();
     final List<String> partitionNames = new ArrayList<String>();
     for (PartitionId partitionId : partitionIdSet) {
@@ -306,7 +303,7 @@ public class ParticipantAccessor {
     RunningInstance runningInstance = participant.getRunningInstance();
 
     // check that the resource exists
-    ResourceAccessor resourceAccessor = new ResourceAccessor(_accessor);
+    ResourceAccessor resourceAccessor = resourceAccessor();
     Resource resource = resourceAccessor.readResource(resourceId);
     if (resource == null || resource.getRebalancerConfig() == null) {
       LOG.error("Cannot reset partitions because the resource is not present");
@@ -676,8 +673,8 @@ public class ParticipantAccessor {
    * @param oldParticipantId the participant to drop
    * @param newParticipantId the participant that replaces it
    */
-  private void swapParticipantsInIdealState(IdealState idealState, ParticipantId oldParticipantId,
-      ParticipantId newParticipantId) {
+  protected void swapParticipantsInIdealState(IdealState idealState,
+      ParticipantId oldParticipantId, ParticipantId newParticipantId) {
     for (PartitionId partitionId : idealState.getPartitionSet()) {
       List<ParticipantId> oldPreferenceList = idealState.getPreferenceList(partitionId);
       if (oldPreferenceList != null) {
@@ -701,5 +698,13 @@ public class ParticipantAccessor {
         idealState.setParticipantStateMap(partitionId, preferenceMap);
       }
     }
+  }
+
+  /**
+   * Get a ResourceAccessor instance
+   * @return ResourceAccessor
+   */
+  protected ResourceAccessor resourceAccessor() {
+    return new ResourceAccessor(_accessor);
   }
 }

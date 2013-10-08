@@ -34,6 +34,7 @@ import org.apache.zookeeper.ZooKeeper;
 
 /**
  * Locking scheme for Helix that uses the ZooKeeper exclusive lock implementation
+ * Please use the following lock order convention: Cluster, Participant, Resource, Partition
  */
 public class ZKHelixLock implements HelixLock {
   private static final Logger LOG = Logger.getLogger(ZKHelixLock.class);
@@ -42,8 +43,8 @@ public class ZKHelixLock implements HelixLock {
   private final String _rootPath;
   private final WriteLock _writeLock;
   private final ZkClient _zkClient;
-  private boolean _locked;
-  private boolean _canceled;
+  private volatile boolean _locked;
+  private volatile boolean _canceled;
 
   private final LockListener _listener = new LockListener() {
     @Override
@@ -55,10 +56,10 @@ public class ZKHelixLock implements HelixLock {
       synchronized (ZKHelixLock.this) {
         if (!_canceled) {
           _locked = true;
-          ZKHelixLock.this.notify();
         } else {
           unlock();
         }
+        ZKHelixLock.this.notify();
       }
     }
   };
@@ -115,7 +116,13 @@ public class ZKHelixLock implements HelixLock {
    * @return true if unlock executed, false otherwise
    */
   public synchronized boolean unlock() {
-    _writeLock.unlock();
+    try {
+      _writeLock.unlock();
+    } catch (IllegalArgumentException e) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Unlock skipped because lock node was not present");
+      }
+    }
     _locked = false;
     return true;
   }
