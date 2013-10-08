@@ -20,6 +20,7 @@ package org.apache.helix.api.accessor;
  */
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,11 +92,12 @@ public class ClusterAccessor {
    * @return true if created, false if creation failed
    */
   public boolean createCluster(ClusterConfig cluster) {
-    boolean created = _accessor.createProperty(_keyBuilder.cluster(), null);
-    if (!created) {
+    ClusterConfiguration configuration = _accessor.getProperty(_keyBuilder.clusterConfig());
+    if (configuration != null && isClusterStructureValid()) {
       LOG.error("Cluster already created. Aborting.");
       return false;
     }
+    clearClusterStructure();
     initClusterStructure();
     Map<StateModelDefId, StateModelDefinition> stateModelDefs = cluster.getStateModelMap();
     for (StateModelDefinition stateModelDef : stateModelDefs.values()) {
@@ -121,10 +123,10 @@ public class ClusterAccessor {
     if (cluster.getStats() != null && !cluster.getStats().getMapFields().isEmpty()) {
       _accessor.createProperty(_keyBuilder.persistantStat(), cluster.getStats());
     }
-    _accessor.createProperty(_keyBuilder.clusterConfig(), clusterConfig);
     if (cluster.isPaused()) {
       pauseCluster();
     }
+    _accessor.createProperty(_keyBuilder.clusterConfig(), clusterConfig);
 
     return true;
   }
@@ -150,7 +152,7 @@ public class ClusterAccessor {
    * @param config ClusterConfig
    * @return true if correctly set, false otherwise
    */
-  private boolean setBasicClusterConfig(ClusterConfig config) {
+  protected boolean setBasicClusterConfig(ClusterConfig config) {
     if (config == null) {
       return false;
     }
@@ -199,9 +201,13 @@ public class ClusterAccessor {
 
   /**
    * read entire cluster data
-   * @return cluster snapshot
+   * @return cluster snapshot or null
    */
   public Cluster readCluster() {
+    if (!isClusterStructureValid()) {
+      LOG.error("Cluster is not fully set up");
+      return null;
+    }
     LiveInstance leader = _accessor.getProperty(_keyBuilder.controllerLeader());
 
     /**
@@ -279,6 +285,11 @@ public class ClusterAccessor {
    * @return map of resource id to resource
    */
   public Map<ResourceId, Resource> readResources() {
+    if (!isClusterStructureValid()) {
+      LOG.error("Cluster is not fully set up yet!");
+      return Collections.emptyMap();
+    }
+
     /**
      * map of resource-id to ideal-state
      */
@@ -319,9 +330,14 @@ public class ClusterAccessor {
 
   /**
    * Read all participants in the cluster
-   * @return map of participant id to participant
+   * @return map of participant id to participant, or empty map
    */
   public Map<ParticipantId, Participant> readParticipants() {
+    if (!isClusterStructureValid()) {
+      LOG.error("Cluster is not fully set up yet!");
+      return Collections.emptyMap();
+    }
+
     /**
      * map of instance-id to instance-config
      */
@@ -667,18 +683,8 @@ public class ClusterAccessor {
    * @return true if valid or false otherwise
    */
   public boolean isClusterStructureValid() {
-    return isClusterStructureValid(_clusterId, _accessor.getBaseDataAccessor());
-  }
-
-  /**
-   * check if cluster structure is valid
-   * @param clusterId the cluster to check
-   * @param baseAccessor a base data accessor
-   * @return true if valid or false otherwise
-   */
-  private static boolean isClusterStructureValid(ClusterId clusterId,
-      BaseDataAccessor<?> baseAccessor) {
-    List<String> paths = getRequiredPaths(clusterId);
+    List<String> paths = getRequiredPaths(_clusterId);
+    BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
     if (baseAccessor != null) {
       boolean[] existsResults = baseAccessor.exists(paths, 0);
       for (boolean exists : existsResults) {
@@ -693,7 +699,7 @@ public class ClusterAccessor {
   /**
    * Create empty persistent properties to ensure that there is a valid cluster structure
    */
-  private void initClusterStructure() {
+  public void initClusterStructure() {
     BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
     List<String> paths = getRequiredPaths(_clusterId);
     for (String path : paths) {
@@ -705,6 +711,15 @@ public class ClusterAccessor {
   }
 
   /**
+   * Remove all but the top level cluster node; intended for reconstructing the cluster
+   */
+  private void clearClusterStructure() {
+    BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
+    List<String> paths = getRequiredPaths(_clusterId);
+    baseAccessor.remove(paths, 0);
+  }
+
+  /**
    * Get all property paths that must be set for a cluster structure to be valid
    * @param the cluster that the paths will be relative to
    * @return list of paths as strings
@@ -712,7 +727,6 @@ public class ClusterAccessor {
   private static List<String> getRequiredPaths(ClusterId clusterId) {
     PropertyKey.Builder keyBuilder = new PropertyKey.Builder(clusterId.stringify());
     List<String> paths = new ArrayList<String>();
-    paths.add(keyBuilder.cluster().getPath());
     paths.add(keyBuilder.clusterConfigs().getPath());
     paths.add(keyBuilder.instanceConfigs().getPath());
     paths.add(keyBuilder.propertyStore().getPath());

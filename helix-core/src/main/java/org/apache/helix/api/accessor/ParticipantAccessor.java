@@ -618,12 +618,10 @@ public class ParticipantAccessor {
   boolean dropParticipant(ParticipantId participantId) {
     if (_accessor.getProperty(_keyBuilder.instanceConfig(participantId.stringify())) == null) {
       LOG.error("Config for participant: " + participantId + " does NOT exist in cluster");
-      return false;
     }
 
     if (_accessor.getProperty(_keyBuilder.instance(participantId.stringify())) == null) {
       LOG.error("Participant: " + participantId + " structure does NOT exist in cluster");
-      return false;
     }
 
     // delete participant config path
