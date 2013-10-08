@@ -19,12 +19,14 @@ package org.apache.helix.api.accessor;
  * under the License.
  */
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.helix.HelixDataAccessor;
 import org.apache.helix.PropertyKey;
 import org.apache.helix.api.Cluster;
+import org.apache.helix.api.Participant;
 import org.apache.helix.api.Resource;
 import org.apache.helix.api.Scope;
 import org.apache.helix.api.config.ClusterConfig;
@@ -218,5 +220,25 @@ public class AtomicClusterAccessor extends ClusterAccessor {
       }
     }
     return resources;
+  }
+
+  /**
+   * Read participants atomically. This is participant-atomic, not cluster-atomic
+   */
+  @Override
+  public Map<ParticipantId, Participant> readParticipants() {
+    // read participants individually to keep configs consistent with current state and messages
+    Map<ParticipantId, Participant> participants = Maps.newHashMap();
+    ParticipantAccessor accessor =
+        new AtomicParticipantAccessor(_clusterId, _accessor, _lockProvider);
+    List<String> participantNames = _accessor.getChildNames(_keyBuilder.instanceConfigs());
+    for (String participantName : participantNames) {
+      ParticipantId participantId = ParticipantId.from(participantName);
+      Participant participant = accessor.readParticipant(participantId);
+      if (participant != null) {
+        participants.put(participantId, participant);
+      }
+    }
+    return participants;
   }
 }

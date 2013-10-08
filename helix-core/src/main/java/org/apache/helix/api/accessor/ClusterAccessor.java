@@ -19,7 +19,6 @@ package org.apache.helix.api.accessor;
  * under the License.
  */
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -72,6 +71,7 @@ import org.apache.helix.model.StateModelDefinition;
 import org.apache.log4j.Logger;
 import org.testng.internal.annotations.Sets;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class ClusterAccessor {
@@ -688,7 +688,7 @@ public class ClusterAccessor {
    * @return true if valid or false otherwise
    */
   public boolean isClusterStructureValid() {
-    List<String> paths = getRequiredPaths(_clusterId);
+    List<String> paths = getRequiredPaths(_keyBuilder);
     BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
     if (baseAccessor != null) {
       boolean[] existsResults = baseAccessor.exists(paths, 0);
@@ -706,7 +706,7 @@ public class ClusterAccessor {
    */
   public void initClusterStructure() {
     BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
-    List<String> paths = getRequiredPaths(_clusterId);
+    List<String> paths = getRequiredPaths(_keyBuilder);
     for (String path : paths) {
       boolean status = baseAccessor.create(path, null, AccessOption.PERSISTENT);
       if (!status && LOG.isDebugEnabled()) {
@@ -718,20 +718,19 @@ public class ClusterAccessor {
   /**
    * Remove all but the top level cluster node; intended for reconstructing the cluster
    */
-  private void clearClusterStructure() {
+  void clearClusterStructure() {
     BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
-    List<String> paths = getRequiredPaths(_clusterId);
+    List<String> paths = getRequiredPaths(_keyBuilder);
     baseAccessor.remove(paths, 0);
   }
 
   /**
    * Get all property paths that must be set for a cluster structure to be valid
-   * @param the cluster that the paths will be relative to
+   * @param keyBuilder a PropertyKey.Builder for the cluster
    * @return list of paths as strings
    */
-  private static List<String> getRequiredPaths(ClusterId clusterId) {
-    PropertyKey.Builder keyBuilder = new PropertyKey.Builder(clusterId.stringify());
-    List<String> paths = new ArrayList<String>();
+  static List<String> getRequiredPaths(PropertyKey.Builder keyBuilder) {
+    List<String> paths = Lists.newArrayList();
     paths.add(keyBuilder.clusterConfigs().getPath());
     paths.add(keyBuilder.instanceConfigs().getPath());
     paths.add(keyBuilder.propertyStore().getPath());
@@ -762,22 +761,19 @@ public class ClusterAccessor {
       return false;
     }
 
+    ParticipantAccessor participantAccessor = new ParticipantAccessor(_accessor);
     ParticipantId participantId = participant.getId();
-    if (_accessor.getProperty(_keyBuilder.instanceConfig(participantId.stringify())) != null) {
+    InstanceConfig existConfig =
+        _accessor.getProperty(_keyBuilder.instanceConfig(participantId.stringify()));
+    if (existConfig != null && participantAccessor.isParticipantStructureValid(participantId)) {
       LOG.error("Config for participant: " + participantId + " already exists in cluster: "
           + _clusterId);
       return false;
     }
 
-    // add empty root ZNodes
-    List<PropertyKey> createKeys = new ArrayList<PropertyKey>();
-    createKeys.add(_keyBuilder.messages(participantId.stringify()));
-    createKeys.add(_keyBuilder.currentStates(participantId.stringify()));
-    createKeys.add(_keyBuilder.participantErrors(participantId.stringify()));
-    createKeys.add(_keyBuilder.statusUpdates(participantId.stringify()));
-    for (PropertyKey key : createKeys) {
-      _accessor.createProperty(key, null);
-    }
+    // clear and rebuild the participant structure
+    participantAccessor.clearParticipantStructure(participantId);
+    participantAccessor.initParticipantStructure(participantId);
 
     // add the config
     InstanceConfig instanceConfig = new InstanceConfig(participant.getId());

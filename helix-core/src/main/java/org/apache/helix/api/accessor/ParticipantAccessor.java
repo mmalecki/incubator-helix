@@ -701,6 +701,63 @@ public class ParticipantAccessor {
   }
 
   /**
+   * Create empty persistent properties to ensure that there is a valid participant structure
+   */
+  public void initParticipantStructure(ParticipantId participantId) {
+    List<String> paths = getRequiredPaths(_keyBuilder, participantId);
+    BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
+    for (String path : paths) {
+      boolean status = baseAccessor.create(path, null, AccessOption.PERSISTENT);
+      if (!status && LOG.isDebugEnabled()) {
+        LOG.debug(path + " already exists");
+      }
+    }
+  }
+
+  /**
+   * Clear properties for the participant
+   */
+  public void clearParticipantStructure(ParticipantId participantId) {
+    List<String> paths = getRequiredPaths(_keyBuilder, participantId);
+    BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
+    baseAccessor.remove(paths, 0);
+  }
+
+  /**
+   * check if participant structure is valid
+   * @return true if valid or false otherwise
+   */
+  public boolean isParticipantStructureValid(ParticipantId participantId) {
+    List<String> paths = getRequiredPaths(_keyBuilder, participantId);
+    BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
+    if (baseAccessor != null) {
+      boolean[] existsResults = baseAccessor.exists(paths, 0);
+      for (boolean exists : existsResults) {
+        if (!exists) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Get the paths that should be created if the participant exists
+   * @param keyBuilder PropertyKey.Builder for the cluster
+   * @param participantId the participant for which to generate paths
+   * @return list of required paths as strings
+   */
+  static List<String> getRequiredPaths(PropertyKey.Builder keyBuilder, ParticipantId participantId) {
+    List<String> paths = Lists.newArrayList();
+    paths.add(keyBuilder.instanceConfig(participantId.stringify()).getPath());
+    paths.add(keyBuilder.messages(participantId.stringify()).getPath());
+    paths.add(keyBuilder.currentStates(participantId.stringify()).getPath());
+    paths.add(keyBuilder.participantErrors(participantId.stringify()).getPath());
+    paths.add(keyBuilder.statusUpdates(participantId.stringify()).getPath());
+    return paths;
+  }
+
+  /**
    * Get a ResourceAccessor instance
    * @return ResourceAccessor
    */
