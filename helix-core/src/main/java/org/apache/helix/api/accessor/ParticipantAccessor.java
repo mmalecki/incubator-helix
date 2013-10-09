@@ -655,7 +655,7 @@ public class ParticipantAccessor {
       return false;
     }
     dropParticipant(oldParticipantId);
-    ResourceAccessor resourceAccessor = new ResourceAccessor(_accessor);
+    ResourceAccessor resourceAccessor = resourceAccessor();
     Map<String, IdealState> idealStateMap = _accessor.getChildValuesMap(_keyBuilder.idealStates());
     for (String resourceName : idealStateMap.keySet()) {
       IdealState idealState = idealStateMap.get(resourceName);
@@ -717,7 +717,7 @@ public class ParticipantAccessor {
   /**
    * Clear properties for the participant
    */
-  public void clearParticipantStructure(ParticipantId participantId) {
+  void clearParticipantStructure(ParticipantId participantId) {
     List<String> paths = getRequiredPaths(_keyBuilder, participantId);
     BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
     baseAccessor.remove(paths, 0);

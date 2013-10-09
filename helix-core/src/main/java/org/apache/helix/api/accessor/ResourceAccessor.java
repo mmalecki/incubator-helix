@@ -129,7 +129,7 @@ public class ResourceAccessor {
    * @param resourceId
    * @param configuration
    */
-  void setConfiguration(ResourceId resourceId, ResourceConfiguration configuration) {
+  private void setConfiguration(ResourceId resourceId, ResourceConfiguration configuration) {
     _accessor.setProperty(_keyBuilder.resourceConfig(resourceId.stringify()), configuration);
     // also set an ideal state if the resource supports it
     RebalancerConfig rebalancerConfig = new RebalancerConfig(configuration);
@@ -278,7 +278,7 @@ public class ResourceAccessor {
    * @return true if they were reset, false otherwise
    */
   public boolean resetResources(Set<ResourceId> resetResourceIdSet) {
-    ParticipantAccessor accessor = new ParticipantAccessor(_accessor);
+    ParticipantAccessor accessor = participantAccessor();
     List<ExternalView> extViews = _accessor.getChildValues(_keyBuilder.externalViews());
     for (ExternalView extView : extViews) {
       if (!resetResourceIdSet.contains(extView.getResourceId())) {
@@ -435,5 +435,13 @@ public class ResourceAccessor {
     }
     return new Resource(resourceId, type, idealState, resourceAssignment, externalView,
         rebalancerContext, userConfig, bucketSize, batchMessageMode);
+  }
+
+  /**
+   * Get a ParticipantAccessor instance
+   * @return ParticipantAccessor
+   */
+  protected ParticipantAccessor participantAccessor() {
+    return new ParticipantAccessor(_accessor);
   }
 }

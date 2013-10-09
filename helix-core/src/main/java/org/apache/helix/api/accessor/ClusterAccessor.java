@@ -157,7 +157,7 @@ public class ClusterAccessor {
    * @param config ClusterConfig
    * @return true if correctly set, false otherwise
    */
-  protected boolean setBasicClusterConfig(ClusterConfig config) {
+  private boolean setBasicClusterConfig(ClusterConfig config) {
     if (config == null) {
       return false;
     }
@@ -718,7 +718,7 @@ public class ClusterAccessor {
   /**
    * Remove all but the top level cluster node; intended for reconstructing the cluster
    */
-  void clearClusterStructure() {
+  private void clearClusterStructure() {
     BaseDataAccessor<?> baseAccessor = _accessor.getBaseDataAccessor();
     List<String> paths = getRequiredPaths(_keyBuilder);
     baseAccessor.remove(paths, 0);
@@ -729,7 +729,7 @@ public class ClusterAccessor {
    * @param keyBuilder a PropertyKey.Builder for the cluster
    * @return list of paths as strings
    */
-  static List<String> getRequiredPaths(PropertyKey.Builder keyBuilder) {
+  private static List<String> getRequiredPaths(PropertyKey.Builder keyBuilder) {
     List<String> paths = Lists.newArrayList();
     paths.add(keyBuilder.clusterConfigs().getPath());
     paths.add(keyBuilder.instanceConfigs().getPath());

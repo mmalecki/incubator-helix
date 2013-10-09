@@ -40,13 +40,27 @@ public class AtomicResourceAccessor extends ResourceAccessor {
   private static final Logger LOG = Logger.getLogger(AtomicResourceAccessor.class);
 
   private final ClusterId _clusterId;
+  private final HelixDataAccessor _accessor;
   private final HelixLockable _lockProvider;
 
+  /**
+   * Non-atomic instance to protect against recursive locking via polymorphism
+   */
+  private final ResourceAccessor _resourceAccessor;
+
+  /**
+   * Instantiate the accessor
+   * @param clusterId the cluster to access
+   * @param accessor a HelixDataAccessor for the physical properties
+   * @param lockProvider a lock provider
+   */
   public AtomicResourceAccessor(ClusterId clusterId, HelixDataAccessor accessor,
       HelixLockable lockProvider) {
     super(accessor);
     _clusterId = clusterId;
+    _accessor = accessor;
     _lockProvider = lockProvider;
+    _resourceAccessor = new ResourceAccessor(accessor);
   }
 
   @Override
@@ -55,7 +69,7 @@ public class AtomicResourceAccessor extends ResourceAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.readResource(resourceId);
+        return _resourceAccessor.readResource(resourceId);
       } finally {
         lock.unlock();
       }
@@ -69,14 +83,7 @@ public class AtomicResourceAccessor extends ResourceAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        Resource resource = super.readResource(resourceId);
-        if (resource == null) {
-          LOG.error("Resource " + resourceId + " does not exist, cannot be updated");
-          return null;
-        }
-        ResourceConfig config = resourceDelta.mergeInto(resource.getConfig());
-        super.setResource(config);
-        return config;
+        return _resourceAccessor.updateResource(resourceId, resourceDelta);
       } finally {
         lock.unlock();
       }
@@ -90,7 +97,7 @@ public class AtomicResourceAccessor extends ResourceAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.setRebalancerContext(resourceId, context);
+        return _resourceAccessor.setRebalancerContext(resourceId, context);
       } finally {
         lock.unlock();
       }
@@ -108,7 +115,7 @@ public class AtomicResourceAccessor extends ResourceAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.setResource(resourceConfig);
+        return _resourceAccessor.setResource(resourceConfig);
       } finally {
         lock.unlock();
       }
@@ -123,11 +130,17 @@ public class AtomicResourceAccessor extends ResourceAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.generateDefaultAssignment(resourceId, replicaCount, participantGroupTag);
+        return _resourceAccessor.generateDefaultAssignment(resourceId, replicaCount,
+            participantGroupTag);
       } finally {
         lock.unlock();
       }
     }
     return false;
+  }
+
+  @Override
+  protected ParticipantAccessor participantAccessor() {
+    return new AtomicParticipantAccessor(_clusterId, _accessor, _lockProvider);
   }
 }

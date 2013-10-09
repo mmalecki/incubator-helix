@@ -19,23 +19,18 @@ package org.apache.helix.api.accessor;
  * under the License.
  */
 
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.helix.HelixDataAccessor;
-import org.apache.helix.PropertyKey;
 import org.apache.helix.api.Participant;
 import org.apache.helix.api.Scope;
 import org.apache.helix.api.config.ParticipantConfig;
 import org.apache.helix.api.id.ClusterId;
 import org.apache.helix.api.id.MessageId;
 import org.apache.helix.api.id.ParticipantId;
-import org.apache.helix.api.id.ResourceId;
-import org.apache.helix.controller.rebalancer.context.PartitionedRebalancerContext;
 import org.apache.helix.lock.HelixLock;
 import org.apache.helix.lock.HelixLockable;
-import org.apache.helix.model.IdealState;
 import org.apache.helix.model.Message;
 import org.apache.log4j.Logger;
 
@@ -50,16 +45,39 @@ public class AtomicParticipantAccessor extends ParticipantAccessor {
 
   private final ClusterId _clusterId;
   private final HelixDataAccessor _accessor;
-  private final PropertyKey.Builder _keyBuilder;
   private final HelixLockable _lockProvider;
 
+  /**
+   * Non-atomic instance to protect against recursive locking via polymorphism
+   */
+  private final ParticipantAccessor _participantAccessor;
+
+  /**
+   * Instantiate the accessor
+   * @param clusterId the cluster to access
+   * @param accessor a HelixDataAccessor for the physical properties
+   * @param lockProvider a lock provider
+   */
   public AtomicParticipantAccessor(ClusterId clusterId, HelixDataAccessor accessor,
       HelixLockable lockProvider) {
     super(accessor);
     _clusterId = clusterId;
     _accessor = accessor;
-    _keyBuilder = accessor.keyBuilder();
     _lockProvider = lockProvider;
+    _participantAccessor = new ParticipantAccessor(accessor);
+  }
+
+  @Override
+  void enableParticipant(ParticipantId participantId, boolean isEnabled) {
+    HelixLock lock = _lockProvider.getLock(_clusterId, Scope.participant(participantId));
+    boolean locked = lock.lock();
+    if (locked) {
+      try {
+        _participantAccessor.enableParticipant(participantId);
+      } finally {
+        lock.unlock();
+      }
+    }
   }
 
   @Override
@@ -68,7 +86,7 @@ public class AtomicParticipantAccessor extends ParticipantAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.readParticipant(participantId);
+        return _participantAccessor.readParticipant(participantId);
       } finally {
         lock.unlock();
       }
@@ -87,7 +105,7 @@ public class AtomicParticipantAccessor extends ParticipantAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.setParticipant(participantConfig);
+        return _participantAccessor.setParticipant(participantConfig);
       } finally {
         lock.unlock();
       }
@@ -102,70 +120,12 @@ public class AtomicParticipantAccessor extends ParticipantAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        Participant participant = super.readParticipant(participantId);
-        if (participant == null) {
-          LOG.error("Participant " + participantId + " does not exist, cannot be updated");
-          return null;
-        }
-        ParticipantConfig config = participantDelta.mergeInto(participant.getConfig());
-        super.setParticipant(config);
-        return config;
+        return _participantAccessor.updateParticipant(participantId, participantDelta);
       } finally {
         lock.unlock();
       }
     }
     return null;
-  }
-
-  /**
-   * Swap a new participant in to serve the replicas of an old (dead) one. The atomicity scope is
-   * participant-local and resource-local.
-   */
-  @Override
-  public boolean swapParticipants(ParticipantId oldParticipantId, ParticipantId newParticipantId) {
-    Participant oldParticipant = readParticipant(oldParticipantId);
-    if (oldParticipant == null) {
-      LOG.error("Could not swap participants because the old participant does not exist");
-      return false;
-    }
-    if (oldParticipant.isEnabled()) {
-      LOG.error("Could not swap participants because the old participant is still enabled");
-      return false;
-    }
-    if (oldParticipant.isAlive()) {
-      LOG.error("Could not swap participants because the old participant is still live");
-      return false;
-    }
-    Participant newParticipant = readParticipant(newParticipantId);
-    if (newParticipant == null) {
-      LOG.error("Could not swap participants because the new participant does not exist");
-      return false;
-    }
-    dropParticipant(oldParticipantId);
-    ResourceAccessor resourceAccessor = new ResourceAccessor(_accessor);
-    List<String> idealStates = _accessor.getChildNames(_keyBuilder.idealStates());
-    for (String resourceName : idealStates) {
-      HelixLock lock =
-          _lockProvider.getLock(_clusterId, Scope.resource(ResourceId.from(resourceName)));
-      boolean locked = lock.lock();
-      if (locked) {
-        try {
-          // lock the resource for all ideal state reads and updates
-          IdealState idealState = _accessor.getProperty(_keyBuilder.idealState(resourceName));
-          if (idealState != null) {
-            swapParticipantsInIdealState(idealState, oldParticipantId, newParticipantId);
-            PartitionedRebalancerContext context = PartitionedRebalancerContext.from(idealState);
-            resourceAccessor.setRebalancerContext(ResourceId.from(resourceName), context);
-            _accessor.setProperty(_keyBuilder.idealState(resourceName), idealState);
-          }
-        } finally {
-          lock.unlock();
-        }
-      } else {
-        return false;
-      }
-    }
-    return true;
   }
 
   @Override
@@ -174,7 +134,7 @@ public class AtomicParticipantAccessor extends ParticipantAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.dropParticipant(participantId);
+        return _participantAccessor.dropParticipant(participantId);
       } finally {
         lock.unlock();
       }
@@ -189,7 +149,7 @@ public class AtomicParticipantAccessor extends ParticipantAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        super.insertMessagesToParticipant(participantId, msgMap);
+        _participantAccessor.insertMessagesToParticipant(participantId, msgMap);
       } finally {
         lock.unlock();
       }
@@ -203,7 +163,7 @@ public class AtomicParticipantAccessor extends ParticipantAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        super.updateMessageStatus(participantId, msgMap);
+        _participantAccessor.updateMessageStatus(participantId, msgMap);
       } finally {
         lock.unlock();
       }
@@ -217,7 +177,21 @@ public class AtomicParticipantAccessor extends ParticipantAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        super.deleteMessagesFromParticipant(participantId, msgIdSet);
+        _participantAccessor.deleteMessagesFromParticipant(participantId, msgIdSet);
+      } finally {
+        lock.unlock();
+      }
+    }
+    return;
+  }
+
+  @Override
+  public void initParticipantStructure(ParticipantId participantId) {
+    HelixLock lock = _lockProvider.getLock(_clusterId, Scope.participant(participantId));
+    boolean locked = lock.lock();
+    if (locked) {
+      try {
+        _participantAccessor.initParticipantStructure(participantId);
       } finally {
         lock.unlock();
       }

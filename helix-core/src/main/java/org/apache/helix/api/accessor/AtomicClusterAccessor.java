@@ -57,6 +57,11 @@ public class AtomicClusterAccessor extends ClusterAccessor {
   private final ClusterId _clusterId;
 
   /**
+   * Non-atomic instance to protect against recursive locking via polymorphism
+   */
+  private final ClusterAccessor _clusterAccessor;
+
+  /**
    * Instantiate the accessor
    * @param clusterId the cluster to access
    * @param accessor a HelixDataAccessor for the physical properties
@@ -69,6 +74,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
     _accessor = accessor;
     _keyBuilder = accessor.keyBuilder();
     _clusterId = clusterId;
+    _clusterAccessor = new ClusterAccessor(clusterId, accessor);
   }
 
   @Override
@@ -77,7 +83,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.createCluster(cluster);
+        return _clusterAccessor.createCluster(cluster);
       } finally {
         lock.unlock();
       }
@@ -91,7 +97,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.dropCluster();
+        return _clusterAccessor.dropCluster();
       } finally {
         lock.unlock();
       }
@@ -105,7 +111,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.readCluster();
+        return _clusterAccessor.readCluster();
       } finally {
         lock.unlock();
       }
@@ -123,7 +129,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.addParticipantToCluster(participant);
+        return _clusterAccessor.addParticipantToCluster(participant);
       } finally {
         lock.unlock();
       }
@@ -137,7 +143,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.dropParticipantFromCluster(participantId);
+        return _clusterAccessor.dropParticipantFromCluster(participantId);
       } finally {
         lock.unlock();
       }
@@ -155,7 +161,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.addResourceToCluster(resource);
+        return _clusterAccessor.addResourceToCluster(resource);
       } finally {
         lock.unlock();
       }
@@ -169,7 +175,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        return super.dropResourceFromCluster(resourceId);
+        return _clusterAccessor.dropResourceFromCluster(resourceId);
       } finally {
         lock.unlock();
       }
@@ -183,14 +189,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
     boolean locked = lock.lock();
     if (locked) {
       try {
-        Cluster cluster = super.readCluster();
-        if (cluster == null) {
-          LOG.error("Cluster does not exist, cannot be updated");
-          return null;
-        }
-        ClusterConfig config = clusterDelta.mergeInto(cluster.getConfig());
-        boolean status = super.setBasicClusterConfig(config);
-        return status ? config : null;
+        return _clusterAccessor.updateCluster(clusterDelta);
       } finally {
         lock.unlock();
       }
@@ -240,5 +239,18 @@ public class AtomicClusterAccessor extends ClusterAccessor {
       }
     }
     return participants;
+  }
+
+  @Override
+  public void initClusterStructure() {
+    HelixLock lock = _lockProvider.getLock(_clusterId, Scope.cluster(_clusterId));
+    boolean locked = lock.lock();
+    if (locked) {
+      try {
+        _clusterAccessor.initClusterStructure();
+      } finally {
+        lock.unlock();
+      }
+    }
   }
 }
