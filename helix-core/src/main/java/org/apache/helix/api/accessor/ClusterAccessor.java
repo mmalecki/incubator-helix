@@ -118,20 +118,19 @@ public class ClusterAccessor {
     }
     _accessor.createProperty(_keyBuilder.constraints(), null);
     for (ClusterConstraints constraints : cluster.getConstraintMap().values()) {
-      _accessor.createProperty(_keyBuilder.constraint(constraints.getType().toString()),
-          constraints);
+      _accessor.setProperty(_keyBuilder.constraint(constraints.getType().toString()), constraints);
     }
     ClusterConfiguration clusterConfig = ClusterConfiguration.from(cluster.getUserConfig());
     if (cluster.autoJoinAllowed()) {
       clusterConfig.setAutoJoinAllowed(cluster.autoJoinAllowed());
     }
     if (cluster.getStats() != null && !cluster.getStats().getMapFields().isEmpty()) {
-      _accessor.createProperty(_keyBuilder.persistantStat(), cluster.getStats());
+      _accessor.setProperty(_keyBuilder.persistantStat(), cluster.getStats());
     }
     if (cluster.isPaused()) {
       pauseCluster();
     }
-    _accessor.createProperty(_keyBuilder.clusterConfig(), clusterConfig);
+    _accessor.setProperty(_keyBuilder.clusterConfig(), clusterConfig);
 
     return true;
   }
@@ -653,7 +652,7 @@ public class ClusterAccessor {
       configuration.addNamespacedConfig(resource.getRebalancerConfig().toNamespacedConfig());
       configuration.setBucketSize(resource.getBucketSize());
       configuration.setBatchMessageMode(resource.getBatchMessageMode());
-      _accessor.createProperty(_keyBuilder.resourceConfig(resourceId.stringify()), configuration);
+      _accessor.setProperty(_keyBuilder.resourceConfig(resourceId.stringify()), configuration);
     }
 
     // Create an IdealState from a RebalancerConfig (if the resource is partitioned)
@@ -662,7 +661,7 @@ public class ClusterAccessor {
         ResourceAccessor.rebalancerConfigToIdealState(rebalancerConfig, resource.getBucketSize(),
             resource.getBatchMessageMode());
     if (idealState != null) {
-      _accessor.createProperty(_keyBuilder.idealState(resourceId.stringify()), idealState);
+      _accessor.setProperty(_keyBuilder.idealState(resourceId.stringify()), idealState);
     }
     return true;
   }
@@ -790,8 +789,7 @@ public class ClusterAccessor {
     for (PartitionId partitionId : disabledPartitions) {
       instanceConfig.setInstanceEnabledForPartition(partitionId, false);
     }
-    _accessor.createProperty(_keyBuilder.instanceConfig(participantId.stringify()), instanceConfig);
-    _accessor.createProperty(_keyBuilder.messages(participantId.stringify()), null);
+    _accessor.setProperty(_keyBuilder.instanceConfig(participantId.stringify()), instanceConfig);
     return true;
   }
 

@@ -45,6 +45,7 @@ public class ZKHelixLock implements HelixLock {
   private final ZkClient _zkClient;
   private volatile boolean _locked;
   private volatile boolean _canceled;
+  private volatile boolean _blocked;
 
   private final LockListener _listener = new LockListener() {
     @Override
@@ -79,6 +80,7 @@ public class ZKHelixLock implements HelixLock {
     _writeLock = new WriteLock(zookeeper, _rootPath, null, _listener);
     _locked = false;
     _canceled = false;
+    _blocked = false;
   }
 
   /**
@@ -86,6 +88,7 @@ public class ZKHelixLock implements HelixLock {
    * @return true if the lock succeeded, false if it failed, as is the case if the connection to ZK
    *         is lost
    */
+  @Override
   public synchronized boolean lock() {
     _canceled = false;
     if (_locked) {
@@ -99,6 +102,7 @@ public class ZKHelixLock implements HelixLock {
       if (acquired) {
         _locked = true;
       } else {
+        setBlocked(true);
         wait();
       }
     } catch (KeeperException e) {
@@ -108,6 +112,7 @@ public class ZKHelixLock implements HelixLock {
       LOG.error("Interrupted while acquiring a lock on " + _rootPath);
       _canceled = true;
     }
+    setBlocked(false);
     return _locked;
   }
 
@@ -115,6 +120,7 @@ public class ZKHelixLock implements HelixLock {
    * Unlock the scope
    * @return true if unlock executed, false otherwise
    */
+  @Override
   public synchronized boolean unlock() {
     try {
       _writeLock.unlock();
@@ -125,6 +131,19 @@ public class ZKHelixLock implements HelixLock {
     }
     _locked = false;
     return true;
+  }
+
+  @Override
+  public synchronized boolean isBlocked() {
+    return _blocked;
+  }
+
+  /**
+   * Set if this the lock method is currently blocked
+   * @param isBlocked true if blocked, false otherwise
+   */
+  protected synchronized void setBlocked(boolean isBlocked) {
+    _blocked = isBlocked;
   }
 
   public static void main(String[] args) {

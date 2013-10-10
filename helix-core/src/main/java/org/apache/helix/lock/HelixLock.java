@@ -34,4 +34,10 @@ public interface HelixLock {
    * @return true if the lock was released, false if it could not be released
    */
   public boolean unlock();
+
+  /**
+   * Check if this object is blocked waiting on the lock
+   * @return true if blocked, false otherwise
+   */
+  public boolean isBlocked();
 }

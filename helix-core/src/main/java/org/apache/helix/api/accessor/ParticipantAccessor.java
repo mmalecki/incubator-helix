@@ -747,7 +747,8 @@ public class ParticipantAccessor {
    * @param participantId the participant for which to generate paths
    * @return list of required paths as strings
    */
-  static List<String> getRequiredPaths(PropertyKey.Builder keyBuilder, ParticipantId participantId) {
+  private static List<String> getRequiredPaths(PropertyKey.Builder keyBuilder,
+      ParticipantId participantId) {
     List<String> paths = Lists.newArrayList();
     paths.add(keyBuilder.instanceConfig(participantId.stringify()).getPath());
     paths.add(keyBuilder.messages(participantId.stringify()).getPath());
