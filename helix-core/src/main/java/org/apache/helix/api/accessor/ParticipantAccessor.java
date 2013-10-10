@@ -86,34 +86,36 @@ public class ParticipantAccessor {
    * enable/disable a participant
    * @param participantId
    * @param isEnabled
+   * @return true if enable state succeeded, false otherwise
    */
-  void enableParticipant(ParticipantId participantId, boolean isEnabled) {
+  boolean enableParticipant(ParticipantId participantId, boolean isEnabled) {
     String participantName = participantId.stringify();
     if (_accessor.getProperty(_keyBuilder.instanceConfig(participantName)) == null) {
       LOG.error("Config for participant: " + participantId + " does NOT exist in cluster");
-      return;
+      return false;
     }
 
     InstanceConfig config = new InstanceConfig(participantName);
     config.setInstanceEnabled(isEnabled);
-    _accessor.updateProperty(_keyBuilder.instanceConfig(participantName), config);
-
+    return _accessor.updateProperty(_keyBuilder.instanceConfig(participantName), config);
   }
 
   /**
    * disable participant
    * @param participantId
+   * @return true if disabled successfully, false otherwise
    */
-  public void disableParticipant(ParticipantId participantId) {
-    enableParticipant(participantId, false);
+  public boolean disableParticipant(ParticipantId participantId) {
+    return enableParticipant(participantId, false);
   }
 
   /**
    * enable participant
    * @param participantId
+   * @return true if enabled successfully, false otherwise
    */
-  public void enableParticipant(ParticipantId participantId) {
-    enableParticipant(participantId, true);
+  public boolean enableParticipant(ParticipantId participantId) {
+    return enableParticipant(participantId, true);
   }
 
   /**
@@ -173,8 +175,9 @@ public class ParticipantAccessor {
    * @param participantId
    * @param resourceId
    * @param partitionIdSet
+   * @return true if enable state changed successfully, false otherwise
    */
-  void enablePartitionsForParticipant(final boolean enabled, final ParticipantId participantId,
+  boolean enablePartitionsForParticipant(final boolean enabled, final ParticipantId participantId,
       final ResourceId resourceId, final Set<PartitionId> partitionIdSet) {
     String participantName = participantId.stringify();
     String resourceName = resourceId.stringify();
@@ -183,7 +186,7 @@ public class ParticipantAccessor {
     PropertyKey instanceConfigKey = _keyBuilder.instanceConfig(participantName);
     if (_accessor.getProperty(instanceConfigKey) == null) {
       LOG.error("Config for participant: " + participantId + " does NOT exist in cluster");
-      return;
+      return false;
     }
 
     // check resource exist. warn if not
@@ -211,7 +214,7 @@ public class ParticipantAccessor {
       partitionNames.add(partitionId.stringify());
     }
 
-    baseAccessor.update(instanceConfigKey.getPath(), new DataUpdater<ZNRecord>() {
+    return baseAccessor.update(instanceConfigKey.getPath(), new DataUpdater<ZNRecord>() {
       @Override
       public ZNRecord update(ZNRecord currentData) {
         if (currentData == null) {
@@ -245,10 +248,11 @@ public class ParticipantAccessor {
    * @param participantId
    * @param resourceId
    * @param disablePartitionIdSet
+   * @return true if disabled successfully, false otherwise
    */
-  public void disablePartitionsForParticipant(ParticipantId participantId, ResourceId resourceId,
-      Set<PartitionId> disablePartitionIdSet) {
-    enablePartitionsForParticipant(false, participantId, resourceId, disablePartitionIdSet);
+  public boolean disablePartitionsForParticipant(ParticipantId participantId,
+      ResourceId resourceId, Set<PartitionId> disablePartitionIdSet) {
+    return enablePartitionsForParticipant(false, participantId, resourceId, disablePartitionIdSet);
   }
 
   /**
@@ -256,10 +260,11 @@ public class ParticipantAccessor {
    * @param participantId
    * @param resourceId
    * @param enablePartitionIdSet
+   * @return true if enabled successfully, false otherwise
    */
-  public void enablePartitionsForParticipant(ParticipantId participantId, ResourceId resourceId,
+  public boolean enablePartitionsForParticipant(ParticipantId participantId, ResourceId resourceId,
       Set<PartitionId> enablePartitionIdSet) {
-    enablePartitionsForParticipant(true, participantId, resourceId, enablePartitionIdSet);
+    return enablePartitionsForParticipant(true, participantId, resourceId, enablePartitionIdSet);
   }
 
   /**
@@ -600,10 +605,11 @@ public class ParticipantAccessor {
    * @param resourceId resource id
    * @param participantId participant id
    * @param sessionId session id
+   * @return true if dropped, false otherwise
    */
-  public void dropCurrentState(ResourceId resourceId, ParticipantId participantId,
+  public boolean dropCurrentState(ResourceId resourceId, ParticipantId participantId,
       SessionId sessionId) {
-    _accessor.removeProperty(_keyBuilder.currentState(participantId.stringify(),
+    return _accessor.removeProperty(_keyBuilder.currentState(participantId.stringify(),
         sessionId.stringify(), resourceId.stringify()));
   }
 

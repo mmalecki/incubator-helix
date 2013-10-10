@@ -160,13 +160,15 @@ public class TestAtomicAccessors extends ZkUnitTestBase {
       }
 
       @Override
-      public synchronized boolean lock() {
+      public boolean lock() {
         // synchronize here to ensure atomic set and so that the first lock is the first one who
         // gets to lock
-        if (_firstLock == null) {
-          _firstLock = this;
+        synchronized (LockProvider.this) {
+          if (_firstLock == null) {
+            _firstLock = this;
+          }
+          return super.lock();
         }
-        return super.lock();
       }
 
       @Override
@@ -186,7 +188,7 @@ public class TestAtomicAccessors extends ZkUnitTestBase {
       }
 
       @Override
-      protected synchronized void setBlocked(boolean isBlocked) {
+      protected void setBlocked(boolean isBlocked) {
         if (isBlocked) {
           synchronized (_hasSecondBlocked) {
             _hasSecondBlocked.set(true);

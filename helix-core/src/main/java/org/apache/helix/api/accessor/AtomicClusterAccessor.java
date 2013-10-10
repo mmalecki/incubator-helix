@@ -57,7 +57,7 @@ public class AtomicClusterAccessor extends ClusterAccessor {
   private final ClusterId _clusterId;
 
   /**
-   * Non-atomic instance to protect against recursive locking via polymorphism
+   * Non-atomic instance to protect against reentrant locking via polymorphism
    */
   private final ClusterAccessor _clusterAccessor;
 

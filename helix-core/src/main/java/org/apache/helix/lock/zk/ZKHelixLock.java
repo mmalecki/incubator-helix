@@ -35,6 +35,7 @@ import org.apache.zookeeper.ZooKeeper;
 /**
  * Locking scheme for Helix that uses the ZooKeeper exclusive lock implementation
  * Please use the following lock order convention: Cluster, Participant, Resource, Partition
+ * WARNING: this is not a reentrant lock
  */
 public class ZKHelixLock implements HelixLock {
   private static final Logger LOG = Logger.getLogger(ZKHelixLock.class);
@@ -96,8 +97,11 @@ public class ZKHelixLock implements HelixLock {
       return true;
     }
     try {
+      // create the root path if it doesn't exist
       BaseDataAccessor<ZNRecord> baseAccessor = new ZkBaseDataAccessor<ZNRecord>(_zkClient);
       baseAccessor.create(_rootPath, null, AccessOption.PERSISTENT);
+
+      // try to acquire the lock
       boolean acquired = _writeLock.lock();
       if (acquired) {
         _locked = true;
@@ -134,7 +138,7 @@ public class ZKHelixLock implements HelixLock {
   }
 
   @Override
-  public synchronized boolean isBlocked() {
+  public boolean isBlocked() {
     return _blocked;
   }
 
@@ -142,52 +146,7 @@ public class ZKHelixLock implements HelixLock {
    * Set if this the lock method is currently blocked
    * @param isBlocked true if blocked, false otherwise
    */
-  protected synchronized void setBlocked(boolean isBlocked) {
+  protected void setBlocked(boolean isBlocked) {
     _blocked = isBlocked;
-  }
-
-  public static void main(String[] args) {
-    ZkClient zkClient = new ZkClient("localhost:2199");
-    ClusterId clusterId = ClusterId.from("exampleCluster");
-    final ZKHelixLock lock1 = new ZKHelixLock(clusterId, Scope.cluster(clusterId), zkClient);
-    final ZKHelixLock lock2 = new ZKHelixLock(clusterId, Scope.cluster(clusterId), zkClient);
-    System.err.println("lock1 started");
-    boolean result = lock1.lock();
-    System.err.println("lock1 finished " + result);
-    new Thread() {
-      @Override
-      public void run() {
-        try {
-          Thread.sleep(10000);
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-        System.err.println("unlock1 started");
-        lock1.unlock();
-        System.err.println("unlock1 finished");
-      }
-    }.start();
-    final Thread t1 = new Thread() {
-      @Override
-      public void run() {
-        System.err.println("lock2 started");
-        boolean locked = lock2.lock();
-        System.err.println("lock2 finished " + locked);
-      }
-    };
-    t1.start();
-    new Thread() {
-      @Override
-      public void run() {
-        try {
-          Thread.sleep(5000);
-          System.err.println("interrupt2 start");
-          t1.interrupt();
-          System.err.println("interrupt2 finished");
-        } catch (InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-    }.start();
   }
 }

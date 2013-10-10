@@ -44,7 +44,7 @@ public class AtomicResourceAccessor extends ResourceAccessor {
   private final HelixLockable _lockProvider;
 
   /**
-   * Non-atomic instance to protect against recursive locking via polymorphism
+   * Non-atomic instance to protect against reentrant locking via polymorphism
    */
   private final ResourceAccessor _resourceAccessor;
 

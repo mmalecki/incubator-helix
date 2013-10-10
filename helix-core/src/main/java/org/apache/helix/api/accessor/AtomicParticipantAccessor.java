@@ -48,7 +48,7 @@ public class AtomicParticipantAccessor extends ParticipantAccessor {
   private final HelixLockable _lockProvider;
 
   /**
-   * Non-atomic instance to protect against recursive locking via polymorphism
+   * Non-atomic instance to protect against reentrant locking via polymorphism
    */
   private final ParticipantAccessor _participantAccessor;
 
@@ -68,16 +68,17 @@ public class AtomicParticipantAccessor extends ParticipantAccessor {
   }
 
   @Override
-  void enableParticipant(ParticipantId participantId, boolean isEnabled) {
+  boolean enableParticipant(ParticipantId participantId, boolean isEnabled) {
     HelixLock lock = _lockProvider.getLock(_clusterId, Scope.participant(participantId));
     boolean locked = lock.lock();
     if (locked) {
       try {
-        _participantAccessor.enableParticipant(participantId);
+        return _participantAccessor.enableParticipant(participantId);
       } finally {
         lock.unlock();
       }
     }
+    return false;
   }
 
   @Override

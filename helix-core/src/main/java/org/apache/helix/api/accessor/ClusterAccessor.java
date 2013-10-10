@@ -161,6 +161,7 @@ public class ClusterAccessor {
       return false;
     }
     ClusterConfiguration configuration = ClusterConfiguration.from(config.getUserConfig());
+    configuration.setAutoJoinAllowed(config.autoJoinAllowed());
     _accessor.setProperty(_keyBuilder.clusterConfig(), configuration);
     Map<ConstraintType, ClusterConstraints> constraints = config.getConstraintMap();
     for (ConstraintType type : constraints.keySet()) {
@@ -465,7 +466,8 @@ public class ClusterAccessor {
    */
   public boolean addStat(final String statName) {
     if (!isClusterStructureValid()) {
-      throw new HelixException("cluster " + _clusterId + " is not setup yet");
+      LOG.error("cluster " + _clusterId + " is not setup yet");
+      return false;
     }
 
     String persistentStatsPath = _keyBuilder.persistantStat().getPath();
@@ -496,7 +498,8 @@ public class ClusterAccessor {
    */
   public boolean dropStat(final String statName) {
     if (!isClusterStructureValid()) {
-      throw new HelixException("cluster " + _clusterId + " is not setup yet");
+      LOG.error("cluster " + _clusterId + " is not setup yet");
+      return false;
     }
 
     String persistentStatsPath = _keyBuilder.persistantStat().getPath();
@@ -528,7 +531,8 @@ public class ClusterAccessor {
    */
   public boolean addAlert(final String alertName) {
     if (!isClusterStructureValid()) {
-      throw new HelixException("cluster " + _clusterId + " is not setup yet");
+      LOG.error("cluster " + _clusterId + " is not setup yet");
+      return false;
     }
 
     BaseDataAccessor<ZNRecord> baseAccessor = _accessor.getBaseDataAccessor();
@@ -564,7 +568,8 @@ public class ClusterAccessor {
    */
   public boolean dropAlert(final String alertName) {
     if (!isClusterStructureValid()) {
-      throw new HelixException("cluster " + _clusterId + " is not setup yet");
+      LOG.error("cluster " + _clusterId + " is not setup yet");
+      return false;
     }
 
     String alertsPath = _keyBuilder.alerts().getPath();
@@ -597,16 +602,18 @@ public class ClusterAccessor {
 
   /**
    * pause controller of cluster
+   * @return true if cluster was paused, false if pause failed or already paused
    */
-  public void pauseCluster() {
-    _accessor.createProperty(_keyBuilder.pause(), new PauseSignal("pause"));
+  public boolean pauseCluster() {
+    return _accessor.createProperty(_keyBuilder.pause(), new PauseSignal("pause"));
   }
 
   /**
    * resume controller of cluster
+   * @return true if resume succeeded, false otherwise
    */
-  public void resumeCluster() {
-    _accessor.removeProperty(_keyBuilder.pause());
+  public boolean resumeCluster() {
+    return _accessor.removeProperty(_keyBuilder.pause());
   }
 
   /**
