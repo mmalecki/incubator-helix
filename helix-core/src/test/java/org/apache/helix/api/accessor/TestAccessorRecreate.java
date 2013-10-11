@@ -159,4 +159,12 @@ public class TestAccessorRecreate extends ZkUnitTestBase {
             .userConfig(userConfig).build();
     return accessor.addParticipantToCluster(participant);
   }
+  // private HelixLockable lockProvider() {
+  // return new HelixLockable() {
+  // @Override
+  // public HelixLock getLock(ClusterId clusterId, Scope<?> scope) {
+  // return new ZKHelixLock(clusterId, scope, _gZkClient);
+  // }
+  // };
+  // }
 }
