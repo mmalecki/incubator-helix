@@ -50,7 +50,7 @@ public class TestAccessorRecreate extends ZkUnitTestBase {
   @Test
   public void testRecreateCluster() {
     final String MODIFIER = "modifier";
-    final ClusterId clusterId = ClusterId.from("testCluster");
+    final ClusterId clusterId = ClusterId.from("TestAccessorRecreate!testCluster");
 
     // connect
     boolean connected = _gZkClient.waitUntilConnected(30000, TimeUnit.MILLISECONDS);

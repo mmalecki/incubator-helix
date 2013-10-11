@@ -49,7 +49,7 @@ public class TestAtomicAccessors extends ZkUnitTestBase {
 
   @Test
   public void testClusterUpdates() {
-    final ClusterId clusterId = ClusterId.from("testCluster");
+    final ClusterId clusterId = ClusterId.from("TestAtomicAccessors!testCluster");
     final BaseDataAccessor<ZNRecord> baseAccessor = new ZkBaseDataAccessor<ZNRecord>(_gZkClient);
     final HelixDataAccessor helixAccessor =
         new ZKHelixDataAccessor(clusterId.stringify(), baseAccessor);
