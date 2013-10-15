@@ -1,4 +1,4 @@
-package org.apache.helix.controller.rebalancer.util;
+package org.apache.helix.api.rebalancer.util;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -49,8 +49,8 @@ import com.google.common.collect.Sets;
  * Collection of functions that will compute the best possible state based on the participants and
  * the rebalancer configuration of a resource.
  */
-public class NewConstraintBasedAssignment {
-  private static Logger logger = Logger.getLogger(NewConstraintBasedAssignment.class);
+public class ConstraintBasedAssignment {
+  private static Logger logger = Logger.getLogger(ConstraintBasedAssignment.class);
 
   /**
    * Get a set of disabled participants for a partition

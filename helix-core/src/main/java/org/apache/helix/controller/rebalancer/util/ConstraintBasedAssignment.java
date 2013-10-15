@@ -39,7 +39,9 @@ import org.apache.log4j.Logger;
 
 /**
  * Collection of functions that will compute the best possible states given the live instances and
- * an ideal state.
+ * an ideal state.<br/>
+ * <br/>
+ * Deprecated. Use {@link org.apache.helix.api.rebalancer.util.ConstraintBasedAssignment} instead.
  */
 @Deprecated
 public class ConstraintBasedAssignment {

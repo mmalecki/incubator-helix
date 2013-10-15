@@ -1,4 +1,4 @@
-package org.apache.helix.controller.rebalancer.context;
+package org.apache.helix.api.rebalancer;
 
 import org.apache.helix.api.Scope;
 import org.apache.helix.api.config.NamespacedConfig;

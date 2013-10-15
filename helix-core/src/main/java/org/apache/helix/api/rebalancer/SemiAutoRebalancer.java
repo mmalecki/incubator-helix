@@ -1,4 +1,4 @@
-package org.apache.helix.controller.rebalancer.context;
+package org.apache.helix.api.rebalancer;
 
 import java.util.List;
 import java.util.Map;
@@ -9,7 +9,7 @@ import org.apache.helix.api.Cluster;
 import org.apache.helix.api.State;
 import org.apache.helix.api.id.ParticipantId;
 import org.apache.helix.api.id.PartitionId;
-import org.apache.helix.controller.rebalancer.util.NewConstraintBasedAssignment;
+import org.apache.helix.api.rebalancer.util.ConstraintBasedAssignment;
 import org.apache.helix.controller.stages.ResourceCurrentState;
 import org.apache.helix.model.ResourceAssignment;
 import org.apache.helix.model.StateModelDefinition;
@@ -61,16 +61,16 @@ public class SemiAutoRebalancer implements Rebalancer {
       Map<ParticipantId, State> currentStateMap =
           currentState.getCurrentStateMap(config.getResourceId(), partition);
       Set<ParticipantId> disabledInstancesForPartition =
-          NewConstraintBasedAssignment.getDisabledParticipants(cluster.getParticipantMap(),
+          ConstraintBasedAssignment.getDisabledParticipants(cluster.getParticipantMap(),
               partition);
       List<ParticipantId> preferenceList =
-          NewConstraintBasedAssignment.getPreferenceList(cluster, partition,
+          ConstraintBasedAssignment.getPreferenceList(cluster, partition,
               config.getPreferenceList(partition));
       Map<State, String> upperBounds =
-          NewConstraintBasedAssignment.stateConstraints(stateModelDef, config.getResourceId(),
+          ConstraintBasedAssignment.stateConstraints(stateModelDef, config.getResourceId(),
               cluster.getConfig());
       Map<ParticipantId, State> bestStateForPartition =
-          NewConstraintBasedAssignment.computeAutoBestStateForPartition(upperBounds, cluster
+          ConstraintBasedAssignment.computeAutoBestStateForPartition(upperBounds, cluster
               .getLiveParticipantMap().keySet(), stateModelDef, preferenceList, currentStateMap,
               disabledInstancesForPartition);
       partitionMapping.addReplicaMap(partition, bestStateForPartition);

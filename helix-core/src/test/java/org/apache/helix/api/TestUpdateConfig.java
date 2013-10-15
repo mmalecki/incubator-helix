@@ -9,8 +9,8 @@ import org.apache.helix.api.id.ParticipantId;
 import org.apache.helix.api.id.PartitionId;
 import org.apache.helix.api.id.ResourceId;
 import org.apache.helix.api.id.StateModelDefId;
-import org.apache.helix.controller.rebalancer.context.FullAutoRebalancerContext;
-import org.apache.helix.controller.rebalancer.context.SemiAutoRebalancerContext;
+import org.apache.helix.api.rebalancer.FullAutoRebalancerContext;
+import org.apache.helix.api.rebalancer.SemiAutoRebalancerContext;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 

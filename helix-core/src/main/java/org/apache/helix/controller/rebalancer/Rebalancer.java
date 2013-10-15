@@ -30,6 +30,8 @@ import org.apache.helix.model.ResourceAssignment;
  * Allows one to come up with custom implementation of a rebalancer.<br/>
  * This will be invoked on all changes that happen in the cluster.<br/>
  * Simply return the newIdealState for a resource in this method.<br/>
+ * <br/>
+ * Deprecated. Use {@link org.apache.helix.api.rebalancer.Rebalancer} instead.
  */
 @Deprecated
 public interface Rebalancer {

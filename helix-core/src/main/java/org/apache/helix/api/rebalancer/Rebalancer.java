@@ -1,4 +1,9 @@
-package org.apache.helix.controller.rebalancer.context;
+package org.apache.helix.api.rebalancer;
+
+import org.apache.helix.HelixManager;
+import org.apache.helix.api.Cluster;
+import org.apache.helix.controller.stages.ResourceCurrentState;
+import org.apache.helix.model.ResourceAssignment;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -19,19 +24,15 @@ package org.apache.helix.controller.rebalancer.context;
  * under the License.
  */
 
-public interface ContextSerializer {
-  /**
-   * Convert a RebalancerContext object instance to a String
-   * @param data instance of the rebalancer context type
-   * @return String representing the object
-   */
-  public <T> String serialize(final T data);
+/**
+ * Allows one to come up with custom implementation of a rebalancer.<br/>
+ * This will be invoked on all changes that happen in the cluster.<br/>
+ * Simply return the resource assignment for a resource in this method.<br/>
+ */
+public interface Rebalancer {
 
-  /**
-   * Convert raw bytes to a generic object instance
-   * @param clazz The class represented by the deserialized string
-   * @param string String representing the object
-   * @return instance of the generic type or null if the conversion failed
-   */
-  public <T> T deserialize(final Class<T> clazz, final String string);
+  public void init(HelixManager helixManager);
+
+  public ResourceAssignment computeResourceMapping(RebalancerConfig rebalancerConfig, Cluster cluster,
+      ResourceCurrentState currentState);
 }

@@ -1,4 +1,4 @@
-package org.apache.helix.controller.rebalancer.context;
+package org.apache.helix.api.rebalancer;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;

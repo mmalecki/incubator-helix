@@ -1,4 +1,4 @@
-package org.apache.helix.controller.rebalancer.context;
+package org.apache.helix.api.rebalancer;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one

@@ -1,9 +1,4 @@
-package org.apache.helix.controller.rebalancer.context;
-
-import org.apache.helix.HelixManager;
-import org.apache.helix.api.Cluster;
-import org.apache.helix.controller.stages.ResourceCurrentState;
-import org.apache.helix.model.ResourceAssignment;
+package org.apache.helix.api.rebalancer;
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -25,14 +20,21 @@ import org.apache.helix.model.ResourceAssignment;
  */
 
 /**
- * Allows one to come up with custom implementation of a rebalancer.<br/>
- * This will be invoked on all changes that happen in the cluster.<br/>
- * Simply return the resource assignment for a resource in this method.<br/>
+ * Methods specifying a rebalancer context that allows replicas. For instance, a rebalancer context
+ * with partitions may accept state model definitions that support multiple replicas per partition,
+ * and it's possible that the policy is that each live participant in the system should have a
+ * replica.
  */
-public interface Rebalancer {
+public interface ReplicatedRebalancerContext extends RebalancerContext {
+  /**
+   * Check if this resource should be assigned to any live participant
+   * @return true if any live participant expected, false otherwise
+   */
+  public boolean anyLiveParticipant();
 
-  public void init(HelixManager helixManager);
-
-  public ResourceAssignment computeResourceMapping(RebalancerConfig rebalancerConfig, Cluster cluster,
-      ResourceCurrentState currentState);
+  /**
+   * Get the number of replicas that each resource subunit should have
+   * @return replica count
+   */
+  public int getReplicaCount();
 }
