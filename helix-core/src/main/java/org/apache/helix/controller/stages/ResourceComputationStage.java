@@ -30,11 +30,11 @@ import org.apache.helix.api.config.ResourceConfig;
 import org.apache.helix.api.id.PartitionId;
 import org.apache.helix.api.id.ResourceId;
 import org.apache.helix.api.id.StateModelFactoryId;
-import org.apache.helix.api.rebalancer.PartitionedRebalancerContext;
-import org.apache.helix.api.rebalancer.RebalancerConfig;
-import org.apache.helix.api.rebalancer.RebalancerContext;
 import org.apache.helix.controller.pipeline.AbstractBaseStage;
 import org.apache.helix.controller.pipeline.StageException;
+import org.apache.helix.controller.rebalancer.context.PartitionedRebalancerContext;
+import org.apache.helix.controller.rebalancer.context.RebalancerConfig;
+import org.apache.helix.controller.rebalancer.context.RebalancerContext;
 import org.apache.helix.model.CurrentState;
 import org.apache.log4j.Logger;
 

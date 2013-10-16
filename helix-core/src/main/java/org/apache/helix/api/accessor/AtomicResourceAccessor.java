@@ -6,7 +6,7 @@ import org.apache.helix.api.Scope;
 import org.apache.helix.api.config.ResourceConfig;
 import org.apache.helix.api.id.ClusterId;
 import org.apache.helix.api.id.ResourceId;
-import org.apache.helix.api.rebalancer.RebalancerContext;
+import org.apache.helix.controller.rebalancer.context.RebalancerContext;
 import org.apache.helix.lock.HelixLock;
 import org.apache.helix.lock.HelixLockable;
 import org.apache.log4j.Logger;

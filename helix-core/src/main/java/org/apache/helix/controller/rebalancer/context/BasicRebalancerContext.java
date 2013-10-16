@@ -1,4 +1,4 @@
-package org.apache.helix.api.rebalancer;
+package org.apache.helix.controller.rebalancer.context;
 
 import java.util.Set;
 
@@ -7,6 +7,7 @@ import org.apache.helix.api.id.PartitionId;
 import org.apache.helix.api.id.ResourceId;
 import org.apache.helix.api.id.StateModelDefId;
 import org.apache.helix.api.id.StateModelFactoryId;
+import org.apache.helix.controller.rebalancer.RebalancerRef;
 import org.codehaus.jackson.annotate.JsonIgnore;
 
 /*

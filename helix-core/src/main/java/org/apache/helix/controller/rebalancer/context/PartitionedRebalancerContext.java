@@ -1,4 +1,4 @@
-package org.apache.helix.api.rebalancer;
+package org.apache.helix.controller.rebalancer.context;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -10,6 +10,7 @@ import org.apache.helix.api.Partition;
 import org.apache.helix.api.id.ParticipantId;
 import org.apache.helix.api.id.PartitionId;
 import org.apache.helix.api.id.ResourceId;
+import org.apache.helix.controller.rebalancer.RebalancerRef;
 import org.apache.helix.model.IdealState;
 import org.apache.helix.model.IdealState.RebalanceMode;
 import org.apache.helix.model.StateModelDefinition;

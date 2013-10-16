@@ -1,5 +1,11 @@
 package org.apache.helix.controller.rebalancer;
 
+import org.apache.helix.HelixManager;
+import org.apache.helix.api.Cluster;
+import org.apache.helix.controller.rebalancer.context.RebalancerConfig;
+import org.apache.helix.controller.stages.ResourceCurrentState;
+import org.apache.helix.model.ResourceAssignment;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,40 +25,15 @@ package org.apache.helix.controller.rebalancer;
  * under the License.
  */
 
-import org.apache.helix.HelixManager;
-import org.apache.helix.controller.stages.ClusterDataCache;
-import org.apache.helix.controller.stages.CurrentStateOutput;
-import org.apache.helix.model.IdealState;
-import org.apache.helix.model.Resource;
-import org.apache.helix.model.ResourceAssignment;
-
 /**
  * Allows one to come up with custom implementation of a rebalancer.<br/>
  * This will be invoked on all changes that happen in the cluster.<br/>
- * Simply return the newIdealState for a resource in this method.<br/>
- * <br/>
- * Deprecated. Use {@link org.apache.helix.api.rebalancer.Rebalancer} instead.
+ * Simply return the resource assignment for a resource in this method.<br/>
  */
-@Deprecated
 public interface Rebalancer {
-  /**
-   * Initialize the rebalancer with a HelixManager if necessary
-   * @param manager
-   */
-  void init(HelixManager manager);
 
-  /**
-   * Given an ideal state for a resource and liveness of instances, compute a assignment of
-   * instances and states to each partition of a resource. This method provides all the relevant
-   * information needed to rebalance a resource. If you need additional information use
-   * manager.getAccessor to read the cluster data. This allows one to compute the newIdealState
-   * according to app specific requirements.
-   * @param resourceName the resource for which a mapping will be computed
-   * @param currentIdealState the IdealState that corresponds to this resource
-   * @param currentStateOutput the current states of all partitions
-   * @param clusterData cache of the cluster state
-   */
-  ResourceAssignment computeResourceMapping(final Resource resource,
-      final IdealState currentIdealState, final CurrentStateOutput currentStateOutput,
-      final ClusterDataCache clusterData);
+  public void init(HelixManager helixManager);
+
+  public ResourceAssignment computeResourceMapping(RebalancerConfig rebalancerConfig, Cluster cluster,
+      ResourceCurrentState currentState);
 }

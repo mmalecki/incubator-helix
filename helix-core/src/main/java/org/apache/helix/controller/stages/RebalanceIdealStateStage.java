@@ -24,7 +24,7 @@ import java.util.Map;
 
 import org.apache.helix.HelixManager;
 import org.apache.helix.controller.pipeline.AbstractBaseStage;
-import org.apache.helix.controller.rebalancer.Rebalancer;
+import org.apache.helix.deprecated.controller.rebalancer.Rebalancer;
 import org.apache.helix.model.IdealState;
 import org.apache.helix.model.IdealState.RebalanceMode;
 import org.apache.helix.model.Resource;
