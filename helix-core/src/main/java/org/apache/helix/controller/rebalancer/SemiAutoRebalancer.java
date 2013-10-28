@@ -40,7 +40,7 @@ import org.apache.log4j.Logger;
  * Rebalancer for the SEMI_AUTO mode. It expects a RebalancerConfig that understands the preferred
  * locations of each partition replica
  */
-public class SemiAutoRebalancer implements Rebalancer {
+public class SemiAutoRebalancer implements HelixRebalancer {
   private static final Logger LOG = Logger.getLogger(SemiAutoRebalancer.class);
 
   @Override

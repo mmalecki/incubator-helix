@@ -196,7 +196,7 @@ public class ExternalViewComputeStage extends AbstractBaseStage {
           Message innerMessage =
               schedulerTaskConfig.getInnerMessage(PartitionId.from(taskPartitionName));
           if (innerMessage != null) {
-            String controllerMsgId = innerMessage.getControllerMessagId();
+            String controllerMsgId = innerMessage.getControllerMessageId();
             if (controllerMsgId != null) {
               LOG.info(taskPartitionName + " finished with controllerMsg " + controllerMsgId);
               if (!controllerMsgUpdates.containsKey(controllerMsgId)) {
@@ -211,7 +211,7 @@ public class ExternalViewComputeStage extends AbstractBaseStage {
     // fill the controllerMsgIdCountMap
     for (PartitionId taskId : schedulerTaskConfig.getPartitionSet()) {
       Message innerMessage = schedulerTaskConfig.getInnerMessage(taskId);
-      String controllerMsgId = innerMessage.getControllerMessagId();
+      String controllerMsgId = innerMessage.getControllerMessageId();
 
       if (controllerMsgId != null) {
         Integer curCnt = controllerMsgIdCountMap.get(controllerMsgId);

@@ -307,7 +307,7 @@ public class MessageSelectionStage extends AbstractBaseStage {
   // so that behavior is consistent
   private Map<String, Integer> getStateTransitionPriorityMap(StateModelDefinition stateModelDef) {
     Map<String, Integer> stateTransitionPriorities = new HashMap<String, Integer>();
-    List<String> stateTransitionPriorityList = stateModelDef.getStateTransitionPriorityStringList();
+    List<String> stateTransitionPriorityList = stateModelDef.getStateTransitionPriorityList();
     for (int i = 0; i < stateTransitionPriorityList.size(); i++) {
       stateTransitionPriorities.put(stateTransitionPriorityList.get(i), i);
     }

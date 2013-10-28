@@ -37,7 +37,7 @@ import org.apache.log4j.Logger;
  * under the License.
  */
 
-public class CustomRebalancer implements Rebalancer {
+public class CustomRebalancer implements HelixRebalancer {
 
   private static final Logger LOG = Logger.getLogger(CustomRebalancer.class);
 

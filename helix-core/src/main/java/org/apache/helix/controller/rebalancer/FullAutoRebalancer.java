@@ -49,7 +49,7 @@ import com.google.common.collect.Lists;
  * under the License.
  */
 
-public class FullAutoRebalancer implements Rebalancer {
+public class FullAutoRebalancer implements HelixRebalancer {
   // These should be final, but are initialized in init rather than a constructor
   private AutoRebalanceStrategy _algorithm;
 

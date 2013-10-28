@@ -32,7 +32,7 @@ import org.apache.helix.api.id.ResourceId;
 import org.apache.helix.api.id.StateModelDefId;
 import org.apache.helix.controller.pipeline.AbstractBaseStage;
 import org.apache.helix.controller.pipeline.StageException;
-import org.apache.helix.controller.rebalancer.Rebalancer;
+import org.apache.helix.controller.rebalancer.HelixRebalancer;
 import org.apache.helix.controller.rebalancer.context.RebalancerConfig;
 import org.apache.helix.controller.rebalancer.context.RebalancerContext;
 import org.apache.helix.controller.rebalancer.util.ConstraintBasedAssignment;
@@ -119,7 +119,7 @@ public class BestPossibleStateCalcStage extends AbstractBaseStage {
       RebalancerConfig rebalancerConfig = resourceConfig.getRebalancerConfig();
       ResourceAssignment resourceAssignment = null;
       if (rebalancerConfig != null) {
-        Rebalancer rebalancer = rebalancerConfig.getRebalancer();
+        HelixRebalancer rebalancer = rebalancerConfig.getRebalancer();
         if (rebalancer != null) {
           HelixManager manager = event.getAttribute("helixmanager");
           rebalancer.init(manager);
