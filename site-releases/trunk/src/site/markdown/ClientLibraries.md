@@ -18,41 +18,15 @@ under the License.
 -->
 
 <head>
-  <title>Home</title>
+  <title>Client libraries</title>
 </head>
 
-Navigating the Documentation
+Client libraries
 ----------------------------
 
-### Conceptual Understanding
+Following client libraries, in addition to the HelixAdmin Java interface, are
+available for Helix:
 
-[Concepts / Terminology](./Concepts.html)
+### Python 
 
-[Architecture](./Architecture.html)
-
-### Hands-on Helix
-
-[Getting Helix](./Building.html)
-
-[Quickstart](./Quickstart.html)
-
-[Tutorial](./Tutorial.html)
-
-[Client libraries](./ClientLibraries.html)
-
-[Javadocs](http://helix.incubator.apache.org/apidocs)
-
-### Recipes
-
-[Distributed lock manager](./recipes/lock_manager.html)
-
-[Rabbit MQ consumer group](./recipes/rabbitmq_consumer_group.html)
-
-[Rsync replicated file store](./recipes/rsync_replicated_file_store.html)
-
-[Service discovery](./recipes/service_discovery.html)
-
-[Distributed Task DAG Execution](./recipes/task_dag_execution.html)
-
-[User-Defined Rebalancer Example](./recipes/user_def_rebalancer.html)
-
+* `pyhelix` - https://github.com/kanakb/pyhelix

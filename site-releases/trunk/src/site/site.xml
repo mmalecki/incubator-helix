@@ -69,6 +69,7 @@
       <item name="Architecture" href="./Architecture.html"/>
       <item name="Quick Start" href="./Quickstart.html"/>
       <item name="Tutorial" href="./Tutorial.html"/>
+      <item name="Client libraries" href="./ClientLibraries.html"/>
     </menu>
 
     <menu name="Recipes">
